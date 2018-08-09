@@ -31,9 +31,12 @@ except Exception as e:
 
 def get_accelvector():
     v = [read_word_2c(0x3b), read_word_2c(0x3d), read_word_2c(0x3f)]
-    if rotm:
-        v = numpy.matmul(v, rotm)
-    return v
+    try:
+        if rotm:
+            v = numpy.matmul(v, rotm)
+        return v
+    except Exception as e:
+        return None
 
 bus = smbus.SMBus(1) # or bus = smbus.SMBus(1) for Revision 2 boards
 address = 0x69       # This is the address value read via the i2cdetect command
