@@ -10,7 +10,7 @@ from accelero import get_accelvector
 import math
 
 
-arialfont = ImageFont.truetype("arial.ttf", 22)
+arialfont = ImageFont.truetype("arial.ttf", 18)
 
 D = 1
 
@@ -129,7 +129,7 @@ class LEDCube(SampleBase):
 
 # Main function
 if __name__ == "__main__":
-    sys.argv += ["--led-chain", "3", "--led-parallel", "2", "--led-brightness", "50", "--led-slowdown-gpio", "2"]
+    sys.argv += ["--led-chain", "3", "--led-parallel", "2", "--led-brightness", "75", "--led-slowdown-gpio", "2"]
     graphics_test = LEDCube()
     if (not graphics_test.process()):
         graphics_test.print_help()
