@@ -1,6 +1,7 @@
 import smbus
 import numpy
 import json
+import os
 
 # Power management registers
 power_mgmt_1 = 0x6b
@@ -23,7 +24,7 @@ def read_word_2c(adr):
         return val
 
 try:
-    with open("rotm.json") as f:
+    with open(os.path.join(os.path.dirname(__file__),"rotm.json")) as f:
         rotm = json.load(f)
         print rotm
 except Exception as e:

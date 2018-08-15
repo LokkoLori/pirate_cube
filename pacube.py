@@ -10,9 +10,10 @@ from accelero import get_accelvector
 from mazemap import parsemap, charimage, Hero
 import math
 from colors import getcolor, setColorChema
+import os
 
 
-arialfont = ImageFont.truetype("arial.ttf", 10)
+arialfont = ImageFont.truetype(os.path.join(os.path.dirname(__file__),"arial.ttf"), 10)
 
 D = -0.9
 
@@ -359,7 +360,7 @@ class LEDCube(SampleBase):
 
 # Main function
 if __name__ == "__main__":
-    sys.argv += ["--led-chain", "3", "--led-parallel", "2", "--led-brightness", "75", "--led-slowdown-gpio", "2"]
+    sys.argv += ["--led-chain", "3", "--led-parallel", "2", "--led-brightness", "100", "--led-slowdown-gpio", "2"]
     graphics_test = LEDCube()
     if (not graphics_test.process()):
         graphics_test.print_help()

@@ -1,6 +1,6 @@
 from PIL import Image
 from PIL import ImageDraw
-import math
+import os
 
 from colors import getcolor
 
@@ -199,7 +199,7 @@ class mapSect():
 
 def parsemap(filename, owner=None):
     try:
-        with open(filename) as f:
+        with open(os.path.join(os.path.dirname(__file__),filename)) as f:
             mapstr = f.read()
     except Exception as e:
         return [], []
