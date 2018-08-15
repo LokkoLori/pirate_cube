@@ -16,6 +16,20 @@ class Hero:
         self.copyof = None
         self.copy = None
 
+    def draw(self, image):
+        d = ImageDraw.Draw(image)
+
+        x = int(self.x)
+        y = int(self.y)
+        d.rectangle((x - 1, y, x + 4, y + 3), fill=(0, 0, 0))
+        d.rectangle((x, y - 1, x + 3, y + 4), fill=(0, 0, 0))
+        d.rectangle((x + 1, y + 1, x + 2, y + 2), fill=getcolor("h", 0))
+        f = getcolor("h", 1)
+        d.line((x + 1, y, x + 2, y), fill=f)
+        d.line((x + 3, y + 1, x + 3, y + 2), fill=f)
+        d.line((x + 2, y + 3, x + 1, y + 3), fill=f)
+        d.line((x, y + 2, x, y + 1), fill=f)
+
 
 class charimage:
 
@@ -133,7 +147,7 @@ class mapSect():
         oy = self.y
 
         tock = tick % 4
-        if self.floor != " ":
+        if self.floor not in [" ", "#"]:
             if tock == 0:
                 d.rectangle((ox + 1, oy + 1, ox + 1, oy + 1), fill=getcolor(self.floor))
             elif tock == 1:
@@ -143,6 +157,21 @@ class mapSect():
             elif tock == 3:
                 d.rectangle((ox + 2, oy + 1, ox + 2, oy + 1), fill=getcolor(self.floor))
 
+        tock = tick % 3
+        if self.floor == "#":
+            if tock == 0:
+                d.rectangle((ox - 1, oy-1, ox + 4, oy + 4), fill=getcolor("h", 0))
+                d.rectangle((ox, oy, ox + 3, oy + 3), fill=getcolor("h", 1))
+                d.rectangle((ox+1, oy+1, ox + 2, oy + 2), fill=(0,0,0))
+            if tock == 1:
+                d.rectangle((ox - 1, oy - 1, ox + 4, oy + 4), fill=(0,0,0))
+                d.rectangle((ox, oy, ox + 3, oy + 3), fill=getcolor("h", 0))
+                d.rectangle((ox+1, oy+1, ox + 2, oy + 2), fill=getcolor("h", 1))
+            if tock == 2:
+                d.rectangle((ox - 1, oy-1, ox + 4, oy + 4), fill=getcolor("h", 1))
+                d.rectangle((ox, oy, ox + 3, oy + 3), fill=(0,0,0))
+                d.rectangle((ox+1, oy+1, ox + 2, oy + 2), fill=getcolor("h", 0))
+
 
     def action(self, hero):
 
@@ -150,10 +179,16 @@ class mapSect():
             return
 
         if int(hero.x) == self.x and int(hero.y) == self.y:
+
             if not self.inaction:
-                self.inaction = hero
-                hero.state = self.owner.colorscheme
-                self.owner.colorscheme = self.floor.lower()
+
+                if self.floor == "#":
+                    self.inaction = "welldone"
+                    self.owner.welldone()
+                else:
+                    self.inaction = hero
+                    hero.state = self.owner.colorscheme
+                    self.owner.colorscheme = self.floor.lower()
 
         else:
             if self.inaction == hero:

@@ -12,9 +12,9 @@ import math
 from colors import getcolor, setColorChema
 
 
-arialfont = ImageFont.truetype("arial.ttf", 18)
+arialfont = ImageFont.truetype("arial.ttf", 10)
 
-D = 0.9
+D = -0.9
 
 def treshold(x, mina, maxa):
     if math.fabs(x) < mina:
@@ -33,12 +33,10 @@ def treshold(x, mina, maxa):
 
 HEROES = []
 
-tickcount = 8
+tickcount = 4
 
 prints = ""
 
-# hero.copy.x = conv[4] + conv[5]*coords[conv[3]]
-# hero.copy.y = conv[7] + conv[8]*coords[conv[6]]
 
 facematrix = {
     "Up" : {
@@ -81,7 +79,7 @@ facematrix = {
 
 class Square():
 
-    def __init__(self, name):
+    def __init__(self, name, owner):
         global HEROES
         self.image = Image.new("RGB", (32, 32))
         self.name = name
@@ -96,6 +94,10 @@ class Square():
 
         self.tick = 0
         self.tock = 0
+        self.owner = owner
+        self.flasher = 0
+        self.killafterflash = False
+        self.showwelldone = False
 
     def drawmaze(self):
 
@@ -106,19 +108,6 @@ class Square():
         d = ImageDraw.Draw(self.mazeImage)
         d.rectangle((0, 0, 31, 31), fill=(0, 0, 0))
         self.mazeWalls.drawOnImage(self.mazeImage, ["|","-","w"])
-
-    def drawhero(self, hero):
-
-        d = ImageDraw.Draw(self.image)
-
-        x = int(hero.x)
-        y = int(hero.y)
-        d.rectangle((x + 1, y + 1, x + 2, y + 2), fill=getcolor("h", 0))
-        f = getcolor("h", 1)
-        d.line((x + 1, y, x + 2, y ), fill=f)
-        d.line((x + 3, y + 1, x + 3, y + 2), fill=f)
-        d.line((x + 2, y + 3, x + 1, y + 3), fill=f)
-        d.line((x, y + 2, x, y + 1), fill=f)
 
 
     def edgeCase(self, hero, dx, dy):
@@ -140,7 +129,7 @@ class Square():
             hero.copy = None
             return
 
-        #"my": ["Fr",1,1,0,28,-1,1,-4,-1],
+        #"my": ["Fr",1,1, 0,28,-1, 1,-4,-1],
         #nane, ow direction, xtrans, ytrans
         if not hero.copy:
 
@@ -150,11 +139,11 @@ class Square():
         hero.copy.x = conv[4] + conv[5]*coords[conv[3]]
         hero.copy.y = conv[7] + conv[8]*coords[conv[6]]
 
-        print "{} {} {} -> {} {} {}".format(hero.loc, coords[0], coords[1], hero.copy.loc, hero.copy.x, hero.copy.y)
+        #print "{} {} {} -> {} {} {} ... {}".format(hero.loc, coords[0], coords[1], hero.copy.loc, hero.copy.x, hero.copy.y, dcoord[conv[2]])
 
-        if (coords[conv[2]] <= -2 and not conv[1]) or (coords[conv[2]] >= 30 and conv[1]):
-            if math.fabs(dcoord[conv[2]]) > 0.9:
-                print "hopp"
+        if (coords[conv[2]] <= -2 and not conv[1] and 0 < dcoord[conv[2]]) or (coords[conv[2]] >= 30 and conv[1] and dcoord[conv[2]] < 0):
+            if D < 0 or math.fabs(dcoord[conv[2]]) > 0.9:
+                #print "hopp"
                 HEROES.remove(hero)
                 hero.copy.copyof = None
                 HEROES.append(hero.copy)
@@ -188,7 +177,7 @@ class Square():
         if hero.loc != self.name:
             return
 
-        self.drawhero(hero)
+        hero.draw(self.image)
 
         if hero.copyof:
             return
@@ -203,8 +192,6 @@ class Square():
         dy = gy / gl
 
         self.edgeCase(hero, dx, dy)
-
-
 
         dx = D * treshold(dx, 0.1, 0.5)
         dy = D * treshold(dy, 0.1, 0.5)
@@ -230,11 +217,11 @@ class Square():
         if dy > 0 and b:
             dy = 0
 
-        # find the dominant direction
-        if math.fabs(dx) < math.fabs(dy):
-            dx = 0
-        else:
-            dy = 0
+        # # find the dominant direction
+        # if math.fabs(dx) < math.fabs(dy):
+        #     dx = 0
+        # else:
+        #     dy = 0
 
         for row in self.map:
             for sect in row:
@@ -253,6 +240,12 @@ class Square():
             hero.x = 30
 
 
+    def welldone(self):
+
+        self.flasher = 200
+        self.killafterflash = True
+        self.showwelldone = True
+
     def draw(self, gravity):
 
         setColorChema(self.colorscheme)
@@ -267,6 +260,24 @@ class Square():
             self.tick = 0
             self.tock += 1
 
+        if self.flasher:
+
+            if self.flasher % 3 == 0:
+                cs = "r"
+            if self.flasher % 3 == 1:
+                cs = "g"
+            if self.flasher % 3 == 2:
+                cs = "b"
+
+            for sq in self.owner.squares:
+                sq.colorscheme = cs
+
+            self.flasher -= 1
+
+            if self.flasher == 0:
+                if self.killafterflash:
+                    self.owner.kill = True
+
         for row in self.map:
             for sect in row:
                 sect.renderFloor(self.image, self.tock)
@@ -279,16 +290,28 @@ class Square():
             if hero.copy:
                 self.handleHero(hero.copy, gravity)
 
+        if self.showwelldone:
+            d = ImageDraw.Draw(self.image)
+            d.rectangle((1, 1, 30, 30), fill=(0,0,0))
+            d.text((2, 3), "WELL", font=arialfont)
+            d.text((2, 17), "DONE", font=arialfont)
+
         return
 
 
 class LEDCube(SampleBase):
     def __init__(self, *args, **kwargs):
-        names = ["Ba", "Up", "Fr", "Ri", "Do", "Le"]
-        self.facets = []
-        for n in names:
-            self.facets.append(Square(n))
+        self.kill = False
+        self.squares = []
+        self.reset()
         super(LEDCube, self).__init__(*args, **kwargs)
+
+    def reset(self):
+        global HEROES
+        HEROES = []
+        self.squares = []
+        for n in ["Ba", "Up", "Fr", "Ri", "Do", "Le"]:
+            self.squares.append(Square(n, self))
 
     def run(self):
         image = Image.new("RGB", (96, 64))
@@ -304,6 +327,10 @@ class LEDCube(SampleBase):
 
         while True:
 
+            if self.kill:
+                self.reset()
+                self.kill = False
+
             gravity = get_accelvector()
 
             if gravity is None:
@@ -311,16 +338,16 @@ class LEDCube(SampleBase):
 
             for i in range(0, 3):
                 for j in range(0, 2):
-                    f = self.facets[j*3+i]
+                    s = self.squares[j*3+i]
                     v = vects[j*3+i]
 
                     g = []
                     for k in range(0, 3):
                         g.append(gravity[v[k][1]]*v[k][0])
 
-                    f.draw(g)
+                    s.draw(g)
 
-                    tile = f.image
+                    tile = s.image
                     for t in v[3]:
                         tile = tile.transpose(t)
 
