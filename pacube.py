@@ -247,7 +247,13 @@ class Square():
         self.killafterflash = True
         self.showwelldone = True
 
+    def restart(self):
+
+        self.flasher = 50
+        self.killafterflash = True
+
     def draw(self, gravity):
+
 
         setColorChema(self.colorscheme)
         if self.colorscheme != self.last_colorscheme:
@@ -305,6 +311,8 @@ class LEDCube(SampleBase):
         self.kill = False
         self.squares = []
         self.reset()
+        self.preg = [0 ,0 , 0]
+        self.shakec = 0
         super(LEDCube, self).__init__(*args, **kwargs)
 
     def reset(self):
@@ -337,6 +345,23 @@ class LEDCube(SampleBase):
             if gravity is None:
                 continue
 
+            pdx = gravity[0]-self.preg[0]
+            pdy = gravity[1]-self.preg[1]
+            pdz = gravity[2]-self.preg[2]
+
+            diffv = math.sqrt(pdx*pdx + pdy*pdy + pdz*pdz)
+            self.preg  = list(gravity)
+            if 1500 < diffv:
+                self.shakec += 1
+
+                if 40 < self.shakec:
+                    self.squares[0].restart()
+
+            else:
+                self.shakec -= 2
+                if self.shakec < 0:
+                    self.shakec = 0
+
             for i in range(0, 3):
                 for j in range(0, 2):
                     s = self.squares[j*3+i]
@@ -360,7 +385,7 @@ class LEDCube(SampleBase):
 
 # Main function
 if __name__ == "__main__":
-    sys.argv += ["--led-chain", "3", "--led-parallel", "2", "--led-brightness", "100", "--led-slowdown-gpio", "2"]
+    sys.argv += ["--led-chain", "3", "--led-parallel", "2", "--led-brightness", "75", "--led-slowdown-gpio", "2"]
     graphics_test = LEDCube()
     if (not graphics_test.process()):
         graphics_test.print_help()
