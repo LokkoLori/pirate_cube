@@ -152,8 +152,9 @@ class Square():
 
         print "{} {} {} -> {} {} {}".format(hero.loc, coords[0], coords[1], hero.copy.loc, hero.copy.x, hero.copy.y)
 
-        if (coords[conv[2]] <= -2 and not conv[1]) or (coords[conv[2]] >= 33 and conv[1]):
-            if math.fabs(dcoord[conv[2]]) > 0.7:
+        if (coords[conv[2]] <= -2 and not conv[1]) or (coords[conv[2]] >= 30 and conv[1]):
+            if math.fabs(dcoord[conv[2]]) > 0.9:
+                print "hopp"
                 HEROES.remove(hero)
                 hero.copy.copyof = None
                 HEROES.append(hero.copy)
