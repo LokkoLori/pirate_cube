@@ -37,6 +37,48 @@ tickcount = 8
 
 prints = ""
 
+# hero.copy.x = conv[4] + conv[5]*coords[conv[3]]
+# hero.copy.y = conv[7] + conv[8]*coords[conv[6]]
+
+facematrix = {
+    "Up" : {
+        "my": ["Fr",0,1, 0,28,-1, 1,-4,-1], #ok
+        "py": ["Ba",1,1, 0,0,1, 1,-32,1], #ok ?
+        "mx": ["Le",0,0, 1,0,1, 0,-4,-1], #ok ?
+        "px": ["Ri",1,0, 1,28,-1, 0,-32,1] #ok ?
+    },
+    "Fr" : {
+        "my": ["Up",0,1, 0,28,-1, 1,-4,-1], #ok
+        "py": ["Do",1,1, 0,28,-1, 1,60,-1], #ok
+        "px": ["Le",1,0, 0,-32,1, 1,0,1], #ok
+        "mx": ["Ri",0,0, 0,32,1, 1,0,1] #ok
+    },
+    "Le" : {
+        "my": ["Up",0,1, 1,-4,-1, 0,0,1], #ok
+        "py": ["Do",1,1, 1,-32,1, 0,28,-1],#ok
+        "mx": ["Fr",0,0, 0,32,1, 1,0,1], #ok
+        "px": ["Ba",1,0, 0,-32,1, 1,0,1] #ok
+    },
+    "Ri": {
+        "my": ["Up",0,1, 1,32,1, 0,28,-1], #ok
+        "py": ["Do",1,1, 1,60,-1, 0,0,1], #ok
+        "mx": ["Ba",0,0, 0,32,1, 1,0,1], #ok
+        "px": ["Fr",1,0, 0,-32,1, 1,0,1] #ok
+    },
+    "Ba": {
+        "my": ["Up",0,1, 0,0,1, 1,32,1], #ok
+        "py": ["Do",1,1, 0,0,1, 1,-32,1],#ok
+        "mx": ["Le",0,0, 0,32,1, 1,0,1], #ok
+        "px": ["Ri",1,0, 0,-32,1, 1,0,1] #ok
+    },
+    "Do": {
+        "my": ["Ba",0,1, 0,0,1, 1,32,1], #ok
+        "py": ["Fr",1,1, 0,28,-1, 1,60,-1], #ok
+        "mx": ["Le",0,0, 1,28,-1, 0,32,1], #ok
+        "px": ["Ri",1,0, 1,0,1, 0,60,-1] #ok
+    }
+}
+
 class Square():
 
     def __init__(self, name):
@@ -69,14 +111,76 @@ class Square():
 
         d = ImageDraw.Draw(self.image)
 
-        x = hero.x
-        y = hero.y
+        x = int(hero.x)
+        y = int(hero.y)
         d.rectangle((x + 1, y + 1, x + 2, y + 2), fill=getcolor("h", 0))
         f = getcolor("h", 1)
         d.line((x + 1, y, x + 2, y ), fill=f)
         d.line((x + 3, y + 1, x + 3, y + 2), fill=f)
         d.line((x + 2, y + 3, x + 1, y + 3), fill=f)
         d.line((x, y + 2, x, y + 1), fill=f)
+
+
+    def edgeCase(self, hero, dx, dy):
+        conv = None
+
+        coords = [int(hero.x), int(hero.y)]
+        dcoord = [dx, dy]
+
+        if coords[1] < 0:
+            conv = facematrix[self.name]["my"]
+        if coords[1] > 28:
+            conv = facematrix[self.name]["py"]
+        if coords[0] < 0:
+            conv = facematrix[self.name]["mx"]
+        if coords[0] > 28:
+            conv = facematrix[self.name]["px"]
+
+        if not conv:
+            hero.copy = None
+            return
+
+        #"my": ["Fr",1,1,0,28,-1,1,-4,-1],
+        #nane, ow direction, xtrans, ytrans
+        if not hero.copy:
+
+            hero.copy = Hero(conv[0], 0, 0, "h")
+            hero.copy.copyof = hero
+
+        hero.copy.x = conv[4] + conv[5]*coords[conv[3]]
+        hero.copy.y = conv[7] + conv[8]*coords[conv[6]]
+
+        print "{} {} {} -> {} {} {}".format(hero.loc, coords[0], coords[1], hero.copy.loc, hero.copy.x, hero.copy.y)
+
+        if (coords[conv[2]] <= -2 and not conv[1]) or (coords[conv[2]] >= 33 and conv[1]):
+            if math.fabs(dcoord[conv[2]]) > 0.7:
+                HEROES.remove(hero)
+                hero.copy.copyof = None
+                HEROES.append(hero.copy)
+                hero.copy = None
+
+            # original experiment
+            #
+            # if hero.y < 0:
+            #     if not hero.copy:
+            #         newfacet = "Fr"
+            #         if hero.loc == "Fr":
+            #             newfacet = "Up"
+            #         hero.copy = Hero(newfacet, 0, 0, "h")
+            #         hero.copy.copyof = hero
+            #     hero.copy.x = 28 - int(hero.x)
+            #     hero.copy.y = - 4 - int(hero.y)
+            #
+            #     if hero.y <= -2 and math.fabs(dy) > 0.7:
+            #         # add to other side
+            #         HEROES.remove(hero)
+            #         hero.copy.copyof = None
+            #         HEROES.append(hero.copy)
+            #         hero.copy = None
+            # else:
+            #     hero.copy = None
+
+
 
     def handleHero(self, hero, gravity):
 
@@ -97,25 +201,9 @@ class Square():
         dx = gx / gl
         dy = gy / gl
 
-        if hero.y < 0:
-            if not hero.copy:
-                newfacet = "Fr"
-                if hero.loc == "Fr":
-                    newfacet = "Up"
-                hero.copy = Hero(newfacet, 0, 0, "h")
-                hero.copy.copyof = hero
-            hero.copy.x = 28 - int(hero.x)
-            hero.copy.y = - 4 - int(hero.y)
+        self.edgeCase(hero, dx, dy)
 
-            if hero.y <= -2 and math.fabs(dy) > 0.7:
 
-                #add to other side
-                HEROES.remove(hero)
-                hero.copy.copyof = None
-                HEROES.append(hero.copy)
-                hero.copy = None
-        else:
-            hero.copy = None
 
         dx = D * treshold(dx, 0.1, 0.5)
         dy = D * treshold(dy, 0.1, 0.5)
@@ -156,6 +244,12 @@ class Square():
 
         if hero.y < -2:
             hero.y = -2
+        if hero.y > 30:
+            hero.y = 30
+        if hero.x < -2:
+            hero.x = -2
+        if hero.x > 30:
+            hero.x = 30
 
 
     def draw(self, gravity):

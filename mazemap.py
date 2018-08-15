@@ -178,7 +178,8 @@ def parsemap(filename, owner=None):
 
     while rc < len(lines):
 
-        line = lines[rc].strip()
+        line = lines[rc]
+        line = line.replace("\r", "").replace("\n", "")
         if phase == 0:
             mapline = []
             map.append(mapline)
