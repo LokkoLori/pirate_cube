@@ -134,7 +134,7 @@ class Square():
         #nane, ow direction, xtrans, ytrans
         if not hero.copy:
 
-            hero.copy = Hero(conv[0], 0, 0, "h")
+            hero.copy = Hero(conv[0], 0, 0, " ", hero.color)
             hero.copy.copyof = hero
 
         hero.copy.x = conv[4] + conv[5]*coords[conv[3]]

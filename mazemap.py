@@ -7,11 +7,12 @@ from colors import getcolor
 potsect = ""
 
 class Hero:
-    def __init__(self, loc, x, y, s):
+    def __init__(self, loc, x, y, s, c):
         self.loc = loc
         self.x = x
         self.y = y
         self.state = s
+        self.color = c
         self.moved = False
         self.copyof = None
         self.copy = None
@@ -23,8 +24,8 @@ class Hero:
         y = int(self.y)
         d.rectangle((x - 1, y, x + 4, y + 3), fill=(0, 0, 0))
         d.rectangle((x, y - 1, x + 3, y + 4), fill=(0, 0, 0))
-        d.rectangle((x + 1, y + 1, x + 2, y + 2), fill=getcolor("h", 0))
-        f = getcolor("h", 1)
+        d.rectangle((x + 1, y + 1, x + 2, y + 2), fill=getcolor(self.color, 0))
+        f = getcolor(self.color, 1)
         d.line((x + 1, y, x + 2, y), fill=f)
         d.line((x + 3, y + 1, x + 3, y + 2), fill=f)
         d.line((x + 2, y + 3, x + 1, y + 3), fill=f)
@@ -237,9 +238,9 @@ def parsemap(filename, owner=None):
                 ms.left = line[lc]
                 ms.floor = line[lc + 1]
 
-                if ms.floor in ["1", "2", "3"]:
+                if ms.floor in ["h", "d"]:
+                    heroes.append(Hero(filename[:-4], ms.x, ms.y, s = " ", c = ms.floor))
                     ms.floor = " "
-                    heroes.append(Hero(filename[:-4], ms.x, ms.y, "h"))
 
                 ms.right = line[lc + 2]
                 mlc += 1
