@@ -12,6 +12,7 @@ from accelero import get_accelvector
 import math
 import os
 import numpy
+import random
 
 
 
@@ -61,40 +62,95 @@ class PulseAnim():
         self.phase = 0
         self.step = step
 
-    def val(self):
-        return math.sin(self.phase)
-
     def nextpahse(self):
-        self.phase += 1
+        self.phase += self.step
 
 class Square():
 
-    def __init__(self, name, owner):
+    def __init__(self, data, owner):
         self.image = Image.new("RGB", (32, 32))
         self.imagearr = self.image.load()
-        self.name = name
+        self.d = ImageDraw.Draw(self.image)
+
+        self.name = data[0]
+        self.coordtrs =  data[1:]
         self.owner = owner
         self.time = 0
-        self.pa = PulseAnim(1)
+        self.renderstart = False
+        self.rendering = False
+        self.pa = PulseAnim(0.05)
+        self.ic = 0
+        self.nc = 0
 
-    def draw(self, gravity):
+    def draw(self, vect):
 
+        # if self.name not in ["Up", "Ba", "Ri"]:
+        #     return
 
-        w = 32
-        h = 32
-        p = self.pa.val()
-        if self.name not in ["Up", "Ba"]:
-            return
-        for x in range(w):
-            for y in range(h):
-                hue = 4.0 + math.sin(x / 19.0 + p) + math.sin(y / 9.0 - p) \
-                      + math.sin((x + y) / 25.0 + p) + math.sin(math.sqrt(x ** 2.0 + y ** 2.0) / (8.0-p))
-                hsv = colorsys.hsv_to_rgb(hue / 8.0, 1, 1)
-                self.imagearr[x, y] = tuple([int(round(c * 255.0)) for c in hsv])
+        for i in xrange(32):
+            if (i + self.ic) % 2 != 0:
+                continue
+            for n in xrange(32):
+                if (n + self.nc) % 2 != 0:
+                    continue
+                ian = [i, n]
+                crs = []
+                for c in self.coordtrs:
+                    crs.append(ian[c[0]]*c[1]+c[2])
+                x, y, z = crs
+
+                x += vect[0]
+                y += vect[1]
+                z += vect[2]
+                p = self.pa.phase
+
+                hue = math.sin(x * 0.3) + math.cos(y * 0.5) + math.sin(z * 0.25) + math.cos((x+y+z) * 0.16) + 0.5*math.sin(p)
+                hue = hue / 3.0
+                if hue < -1:
+                    hue = -1
+                elif 1 < hue:
+                    hue = 1
+
+                hue = (hue + 1) / 2.0
+                hsv = colorsys.hsv_to_rgb(hue, 1, 1 - hue)
+
+                pix = tuple([int(round(c * 255.0)) for c in hsv])
+
+                self.imagearr[ian[0], ian[1]] = pix
+
+                # r = random.randint(0,15)
+                # if r & 1:
+                #     self.imagearr[ian[0], ian[1]] = pix
+                # if r & 2:
+                #     self.imagearr[ian[0] + 1, ian[1] + 1] = pix
+                # if r & 4:
+                #     self.imagearr[ian[0]+1, ian[1]] = pix
+                # if r & 8:
+                #     self.imagearr[ian[0], ian[1]+1] = pix
+
+                # self.imagearr[ian[0], ian[1]] = pix
+                # self.imagearr[ian[0] + 1, ian[1] + 1] = pix
+                # self.imagearr[ian[0] + 1, ian[1]] = pix
+                # self.imagearr[ian[0], ian[1] + 1] = pix
 
         self.pa.nextpahse()
+        self.ic += 1
+        if self.ic % 2 == 0:
+            self.nc += 1
+
 
 class LEDCube(SampleBase):
+
+    sidedata = [
+        ("Ba", (1, 1, 0), (0, 0, 0), (0, 1, 0)),
+        ("Up", (1, 1, 0), (0, 1, 0), (0, 0, 32)),
+        ("Fr", (1, 1, 0), (0, 0, 32), (0, -1, 32)),
+        ("Ri", (0, 0, 32), (1, -1, 32), (0, -1, 32)),
+        ("Do", (0, -1, 32), (1, -1, 32), (0, 0, 0)),
+        ("Le", (0, 0, 0), (1, -1, 32), (0, 1, 0))
+
+    ]
+
     def __init__(self, *args, **kwargs):
         self.kill = False
         self.squares = []
@@ -105,20 +161,14 @@ class LEDCube(SampleBase):
         super(LEDCube, self).__init__(*args, **kwargs)
 
     def reset(self):
-        for n in ["Ba", "Up", "Fr", "Ri", "Do", "Le"]:
-            self.squares.append(Square(n, self))
+        for n in LEDCube.sidedata:
+            s = Square(n, self)
+            self.squares.append(s)
 
     def run(self):
         image = Image.new("RGB", (96, 64))
 
-        vects = [
-            [[-1, 0], [-1, 2], [1, 1], [ROTATE_270]],
-            [[-1, 0], [1, 1], [1, 2], [ROTATE_270]],
-            [[1, 0], [-1, 2], [-1, 1], [ROTATE_90]],
-            [[-1, 1], [-1, 2], [-1, 0], [ROTATE_90]],
-            [[-1, 0], [-1, 1], [-1, 2], [ROTATE_180]],
-            [[1, 1], [-1, 2], [1, 0], [ROTATE_270]]
-        ]
+        vect = [0,0,0]
 
         while True:
 
@@ -151,17 +201,17 @@ class LEDCube(SampleBase):
             for i in range(0, 3):
                 for j in range(0, 2):
                     s = self.squares[j*3+i]
-                    v = vects[j*3+i]
 
-                    g = []
-                    for k in range(0, 3):
-                        g.append(gravity[v[k][1]]*v[k][0])
+                    s.draw(vect)
 
-                    s.draw(g)
+                    D = 0.000005
+
+                    vect[0] += -D * gravity[0]
+                    vect[1] += -D * gravity[1]
+                    vect[2] += D * gravity[2]
+
 
                     tile = s.image
-                    for t in v[3]:
-                        tile = tile.transpose(t)
 
                     image.paste(tile, (i*32, j*32))
 
