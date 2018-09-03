@@ -1,17 +1,13 @@
-import math
 import colorsys
 
 
 from samplebase import SampleBase
-import time
 import sys
 from PIL import Image
 from PIL import ImageDraw
-from PIL.Image import FLIP_LEFT_RIGHT, FLIP_TOP_BOTTOM, ROTATE_90, ROTATE_180, ROTATE_270
+from PIL import ImageFilter
 from accelero import get_accelvector
 import math
-import os
-import numpy
 import random
 
 
@@ -65,35 +61,106 @@ class PulseAnim():
     def nextpahse(self):
         self.phase += self.step
 
+
+class Firefly():
+
+    def __init__(self, maxw, maxh, maxv, lurk, color):
+
+        self.x = random.randint(0, maxw)
+        self.y = random.randint(0, maxh)
+        self.vx = random.uniform(0, maxv)
+        self.vy = random.uniform(0, maxv)
+        self.lurk = lurk
+        self.color = color
+
+    def draw(self, d):
+
+        env = []
+        for ry in range(int(self.y), int(self.y)+2):
+            for rx in range(int(self.x), int(self.x)+2):
+                dx = math.fabs(self.x - rx)
+                dy = math.fabs(self.y - ry)
+
+                dc = (1 - dx) * (1 - dy)
+
+                env.append([rx, ry, dc])
+
+        for e in env:
+
+            fillc = []
+            for c in self.color:
+                fillc.append(int(e[2]*c))
+
+            #fillc[3] = 255
+
+            d.point((e[0],e[1],e[0],e[1]), fill=tuple(fillc))
+
+        self.vx += random.uniform(-self.lurk, self.lurk)
+        self.vy += random.uniform(-self.lurk, self.lurk)
+
+        self.x += self.vx
+        self.y += self.vy
+
+        if self.x < 0:
+            self.x = 0
+            self.vx *= -1
+
+        if self.x > 31:
+            self.x = 31
+            self.vx *= -1
+
+        if self.y < 0:
+            self.y = 0
+            self.vy *= -1
+
+        if self.y > 31:
+            self.y = 31
+            self.vy *= -1
+
 class Square():
 
     def __init__(self, data, owner):
-        self.image = Image.new("RGB", (32, 32))
-        self.imagearr = self.image.load()
-        self.d = ImageDraw.Draw(self.image)
+        self.plasmaimage = Image.new("RGBA", (32, 32))
+        self.plasmaimagearr = self.plasmaimage.load()
+        self.fliesImage = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
+        self.fliesImageDraw = ImageDraw.Draw(self.fliesImage, mode="RGBA")
+        self.image = Image.new("RGBA", (32, 32))
 
         self.name = data[0]
         self.coordtrs =  data[1:]
         self.owner = owner
-        self.time = 0
-        self.renderstart = False
-        self.rendering = False
         self.pa = PulseAnim(0.05)
         self.ic = 0
         self.nc = 0
+
+        self.firefiles = []
+        for n in range(0, 10):
+            hue = random.uniform(0, 1)
+            rgb = list(colorsys.hsv_to_rgb(hue, 1, 1))
+            rgb.append(1)
+            self.firefiles.append(Firefly(32, 32, 0.3, 0.02, tuple([int(round(c * 255.0)) for c in rgb])))
+            #self.firefiles.append(Firefly(32, 32, 0.1, 0.00, (255, 255, 255, 255)))
 
     def draw(self, vect):
 
         # if self.name not in ["Up", "Ba", "Ri"]:
         #     return
 
-        for i in xrange(32):
-            if (i + self.ic) % 2 != 0:
+
+        #PLASMAIMAGE
+        o = 2
+        huedrifting = False
+        satdrifting = False
+        valuedrifting = True
+        interlaced = [True, True]
+
+        for i in xrange(32/o):
+            if interlaced[0] and (i + self.ic) % 2 != 0:
                 continue
-            for n in xrange(32):
-                if (n + self.nc) % 2 != 0:
+            for n in xrange(32/o):
+                if interlaced[1] and (n + self.nc) % 2 != 0:
                     continue
-                ian = [i, n]
+                ian = [i*o, n*o]
                 crs = []
                 for c in self.coordtrs:
                     crs.append(ian[c[0]]*c[1]+c[2])
@@ -110,33 +177,73 @@ class Square():
                     hue = -1
                 elif 1 < hue:
                     hue = 1
-
                 hue = (hue + 1) / 2.0
-                hsv = colorsys.hsv_to_rgb(hue, 1, 1 - hue)
+
+                if huedrifting:
+                    sp = p / 10.0
+                    sp = sp - int(sp)
+
+                    shue = hue + sp
+
+                    if shue < 0:
+                        shue = 1 + shue
+                    elif shue > 1:
+                        shue = shue - 1
+                else:
+                    shue = hue
+
+                if satdrifting:
+                    sat = (math.sin(p * 4) + 1.0) * 0.5
+                else:
+                    sat = 0.75
+
+                if valuedrifting:
+                    value = (1 - hue) * (0.25 + (math.sin(p * 2) + 1.0) * 0.375)
+                else:
+                    value = (1 - hue)
+
+                hsv = colorsys.hsv_to_rgb(shue, sat, value)
 
                 pix = tuple([int(round(c * 255.0)) for c in hsv])
 
-                self.imagearr[ian[0], ian[1]] = pix
+                if o == 1:
+                    self.plasmaimagearr[ian[0], ian[1]] = pix
+                elif o == 2:
+                    self.plasmaimagearr[ian[0] + 0, ian[1] + 0] = pix
+                    self.plasmaimagearr[ian[0] + 1, ian[1] + 0] = pix
+                    self.plasmaimagearr[ian[0] + 0, ian[1] + 1] = pix
+                    self.plasmaimagearr[ian[0] + 1, ian[1] + 1] = pix
 
-                # r = random.randint(0,15)
-                # if r & 1:
-                #     self.imagearr[ian[0], ian[1]] = pix
-                # if r & 2:
-                #     self.imagearr[ian[0] + 1, ian[1] + 1] = pix
-                # if r & 4:
-                #     self.imagearr[ian[0]+1, ian[1]] = pix
-                # if r & 8:
-                #     self.imagearr[ian[0], ian[1]+1] = pix
 
-                # self.imagearr[ian[0], ian[1]] = pix
-                # self.imagearr[ian[0] + 1, ian[1] + 1] = pix
-                # self.imagearr[ian[0] + 1, ian[1]] = pix
-                # self.imagearr[ian[0], ian[1] + 1] = pix
 
         self.pa.nextpahse()
         self.ic += 1
         if self.ic % 2 == 0:
             self.nc += 1
+
+
+        self.image = self.plasmaimage.filter(ImageFilter.GaussianBlur())
+
+
+
+        #fireflies
+
+        fliesfade = False
+
+        if fliesfade:
+            if self.ic % 10 == 0:
+                fader = Image.new("RGBA", (32,32))
+                fader = Image.blend(fader, self.fliesImage, alpha=0.8)
+                self.fliesImage.paste(fader)
+                del fader
+        else:
+            self.fliesImageDraw.rectangle((0,0,31,31), fill=(0,0,0,0))
+
+        for ff in self.firefiles:
+            ff.draw(self.fliesImageDraw)
+
+        self.image.paste(self.fliesImage, (0,0), self.fliesImage)
+
 
 
 class LEDCube(SampleBase):
@@ -222,7 +329,7 @@ class LEDCube(SampleBase):
 
 # Main function
 if __name__ == "__main__":
-    sys.argv += ["--led-chain", "3", "--led-parallel", "2", "--led-brightness", "75", "--led-slowdown-gpio", "2"]
+    sys.argv += ["--led-chain", "3", "--led-parallel", "2", "--led-brightness", "100", "--led-slowdown-gpio", "2"]
     graphics_test = LEDCube()
     if (not graphics_test.process()):
         graphics_test.print_help()
