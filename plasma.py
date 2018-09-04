@@ -6,6 +6,7 @@ import sys
 from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFilter
+from PIL import ImageChops
 from accelero import get_accelvector
 import math
 import random
@@ -62,60 +63,123 @@ class PulseAnim():
         self.phase += self.step
 
 
-class Firefly():
+def drawSubpixelPoint(d, x, y, cl):
 
-    def __init__(self, maxw, maxh, maxv, lurk, color):
+    env = []
+    for ry in range(int(y), int(y) + 2):
+        for rx in range(int(x), int(x) + 2):
+            dx = math.fabs(x - rx)
+            dy = math.fabs(y - ry)
 
-        self.x = random.randint(0, maxw)
-        self.y = random.randint(0, maxh)
-        self.vx = random.uniform(0, maxv)
-        self.vy = random.uniform(0, maxv)
+            dc = (1 - dx) * (1 - dy)
+
+            env.append([rx, ry, dc])
+
+    for e in env:
+
+        fillc = []
+        for c in cl:
+            fillc.append(c)
+
+        fillc[3] = int(255*e[2])
+
+        d.point((e[0],e[1],e[0],e[1]), fill=tuple(fillc))
+
+
+class FreeFly():
+
+    freeflies = []
+
+    def __init__(self, color, loc=[16, 16, 32], svelo=0.5, lurk=0.05):
+
+        self.loc = loc
+        self.vel = [random.uniform(-svelo, svelo), random.uniform(-svelo, svelo), 0]
         self.lurk = lurk
         self.color = color
 
-    def draw(self, d):
+    def onSquare(self, square):
+        for coi in range(0,3):
+            if square.coordtrs[coi][0] == -1:
+                if self.loc[coi] != square.coordtrs[coi][2]:
+                    return False
 
-        env = []
-        for ry in range(int(self.y), int(self.y)+2):
-            for rx in range(int(self.x), int(self.x)+2):
-                dx = math.fabs(self.x - rx)
-                dy = math.fabs(self.y - ry)
+        return True
 
-                dc = (1 - dx) * (1 - dy)
+    def draw(self, square, grav):
 
-                env.append([rx, ry, dc])
+        if not self.onSquare(square):
+            return
 
-        for e in env:
+        stick_coord = square.getStickCoord()
 
-            fillc = []
-            for c in self.color:
-                fillc.append(int(e[2]*c))
+        for coi in range(0,3):
+            if square.coordtrs[coi][0] == 0:
+                xco = self.loc[coi] * square.coordtrs[coi][1] + square.coordtrs[coi][2]
 
-            #fillc[3] = 255
+            if square.coordtrs[coi][0] == 1:
+                yco = self.loc[coi] * square.coordtrs[coi][1] + square.coordtrs[coi][2]
 
-            d.point((e[0],e[1],e[0],e[1]), fill=tuple(fillc))
+        drawSubpixelPoint(square.fliesImageDraw, xco, yco, self.color)
 
-        self.vx += random.uniform(-self.lurk, self.lurk)
-        self.vy += random.uniform(-self.lurk, self.lurk)
+        top = -1
+        if not self.loc[stick_coord]:
+            top = 1
 
-        self.x += self.vx
-        self.y += self.vy
+        D = - 0.0000005
 
-        if self.x < 0:
-            self.x = 0
-            self.vx *= -1
+        sgrav = list(grav)
 
-        if self.x > 31:
-            self.x = 31
-            self.vx *= -1
+        sgrav[0] = D * grav[0]
+        sgrav[1] = D * grav[1]
+        sgrav[2] = - D * grav[2]
 
-        if self.y < 0:
-            self.y = 0
-            self.vy *= -1
+        for coi in range(0,3):
+            if coi != stick_coord:
+                self.vel[coi] += random.uniform(-self.lurk, self.lurk) + sgrav[coi]
 
-        if self.y > 31:
-            self.y = 31
-            self.vy *= -1
+            self.vel[coi] *= 0.998
+
+            if self.vel[coi] > 1:
+                self.vel[coi] = 1
+            elif self.vel[coi] < -1:
+                self.vel[coi] = -1
+
+
+        self.loc[0] += self.vel[0]
+        self.loc[1] += self.vel[1]
+        self.loc[2] += self.vel[2]
+
+        firstonsqare = None
+
+        for other in FreeFly.freeflies:
+            if other == self or not other.onSquare(square):
+                continue
+
+            firstonsqare = other
+            break
+
+        if firstonsqare:
+            for v in range(0, 3):
+                self.vel[v] += 0.005 * (firstonsqare.vel[v] - self.vel[v])
+                self.vel[v] += 0.005 * (firstonsqare.loc[v] - self.loc[v])
+
+
+        for i in range(0, 3):
+
+            if i == stick_coord:
+                continue
+
+            if self.loc[i] < 0:
+                self.loc[stick_coord] += self.loc[i]
+                self.loc[i] = 0
+                self.vel[stick_coord] = top * math.fabs(self.vel[i])
+                self.vel[i] = 0
+            if 32 < self.loc[i]:
+                self.loc[stick_coord] += 32 - self.loc[i]
+                self.loc[i] = 32
+                self.vel[stick_coord] = top * math.fabs(self.vel[i])
+                self.vel[i] = 0
+
 
 class Square():
 
@@ -133,26 +197,30 @@ class Square():
         self.ic = 0
         self.nc = 0
 
-        self.firefiles = []
-        for n in range(0, 10):
-            hue = random.uniform(0, 1)
-            rgb = list(colorsys.hsv_to_rgb(hue, 1, 1))
-            rgb.append(1)
-            self.firefiles.append(Firefly(32, 32, 0.3, 0.02, tuple([int(round(c * 255.0)) for c in rgb])))
-            #self.firefiles.append(Firefly(32, 32, 0.1, 0.00, (255, 255, 255, 255)))
+    def getStickCoord(self):
 
-    def draw(self, vect):
+        for coi in range(0,3):
+            if self.coordtrs[coi][0] == -1:
+                return coi
+
+        return -1
+
+
+    def draw(self, vect, gravity):
 
         # if self.name not in ["Up", "Ba", "Ri"]:
         #     return
-
 
         #PLASMAIMAGE
         o = 2
         huedrifting = False
         satdrifting = False
-        valuedrifting = True
+        valuedrifting = False
         interlaced = [True, True]
+        drawplasma = True
+        drawfreefiles = True
+        fliesfade = False
+        blurflies = True
 
         for i in xrange(32/o):
             if interlaced[0] and (i + self.ic) % 2 != 0:
@@ -163,7 +231,10 @@ class Square():
                 ian = [i*o, n*o]
                 crs = []
                 for c in self.coordtrs:
-                    crs.append(ian[c[0]]*c[1]+c[2])
+                    ci = c[0]
+                    if ci < 0:
+                        ci = 0
+                    crs.append(ian[ci]*c[1]+c[2])
                 x, y, z = crs
 
                 x += vect[0]
@@ -195,10 +266,10 @@ class Square():
                 if satdrifting:
                     sat = (math.sin(p * 4) + 1.0) * 0.5
                 else:
-                    sat = 0.75
+                    sat = 1.0
 
                 if valuedrifting:
-                    value = (1 - hue) * (0.25 + (math.sin(p * 2) + 1.0) * 0.375)
+                    value = (1 - hue) * (0.25 + (math.sin(p * 2) + 1.0) * 0.5)
                 else:
                     value = (1 - hue)
 
@@ -214,47 +285,65 @@ class Square():
                     self.plasmaimagearr[ian[0] + 0, ian[1] + 1] = pix
                     self.plasmaimagearr[ian[0] + 1, ian[1] + 1] = pix
 
-
-
         self.pa.nextpahse()
         self.ic += 1
         if self.ic % 2 == 0:
             self.nc += 1
 
 
-        self.image = self.plasmaimage.filter(ImageFilter.GaussianBlur())
-
-
+        if drawplasma:
+            self.image = self.plasmaimage.filter(ImageFilter.GaussianBlur())
+        else:
+            d = ImageDraw.Draw(self.image)
+            d.rectangle((0,0, 31, 31), fill=(0,0,0))
 
         #fireflies
 
-        fliesfade = False
+        if drawfreefiles:
+            simage = None
+            if fliesfade:
+                if self.ic % 3 == 0:
+                    fader = Image.new("RGBA", (32,32))
+                    fader = Image.blend(fader, self.fliesImage, alpha=0.6)
+                    self.fliesImage.paste(fader)
+                    del fader
+                simage = self.fliesImage.copy()
+                self.fliesImage = Image.new("RGBA", (32,32))
+                self.fliesImageDraw = ImageDraw.Draw(self.fliesImage)
 
-        if fliesfade:
-            if self.ic % 10 == 0:
-                fader = Image.new("RGBA", (32,32))
-                fader = Image.blend(fader, self.fliesImage, alpha=0.8)
-                self.fliesImage.paste(fader)
-                del fader
-        else:
-            self.fliesImageDraw.rectangle((0,0,31,31), fill=(0,0,0,0))
+            elif blurflies:
+                simage = self.fliesImage.filter(ImageFilter.GaussianBlur(radius=3))
+                self.fliesImage = Image.new("RGBA", (32, 32))
+                self.fliesImageDraw = ImageDraw.Draw(self.fliesImage)
+            else:
+                self.fliesImageDraw.rectangle((0,0,31,31), fill=(0,0,0,0))
 
-        for ff in self.firefiles:
-            ff.draw(self.fliesImageDraw)
 
-        self.image.paste(self.fliesImage, (0,0), self.fliesImage)
+            for ff in FreeFly.freeflies:
+                ff.draw(self, gravity)
+
+            s2image = None
+            if fliesfade or blurflies:
+                simage.paste(self.fliesImage, (0,0), self.fliesImage)
+                s2image = self.fliesImage
+                self.fliesImage = simage
+
+            self.image = ImageChops.multiply(self.image, self.fliesImage)
+            if s2image:
+                self.image.paste(s2image, (0,0), s2image)
+                del s2image
 
 
 
 class LEDCube(SampleBase):
 
     sidedata = [
-        ("Ba", (1, 1, 0), (0, 0, 0), (0, 1, 0)),
-        ("Up", (1, 1, 0), (0, 1, 0), (0, 0, 32)),
-        ("Fr", (1, 1, 0), (0, 0, 32), (0, -1, 32)),
-        ("Ri", (0, 0, 32), (1, -1, 32), (0, -1, 32)),
-        ("Do", (0, -1, 32), (1, -1, 32), (0, 0, 0)),
-        ("Le", (0, 0, 0), (1, -1, 32), (0, 1, 0))
+        ("Ba", (1, 1, 0), (-1, 0, 0), (0, 1, 0)),
+        ("Up", (1, 1, 0), (0, 1, 0), (-1, 0, 32)),
+        ("Fr", (1, 1, 0), (-1, 0, 32), (0, -1, 32)),
+        ("Ri", (-1, 0, 32), (1, -1, 32), (0, -1, 32)),
+        ("Do", (0, -1, 32), (1, -1, 32), (-1, 0, 0)),
+        ("Le", (-1, 0, 0), (1, -1, 32), (0, 1, 0))
 
     ]
 
@@ -262,9 +351,30 @@ class LEDCube(SampleBase):
         self.kill = False
         self.squares = []
         self.reset()
-        self.preg = [0 ,0 , 0]
+        self.preg = [0, 0, 0]
         self.shakec = 0
         self.frame = 0
+
+        fc = 12
+        hue = 0
+        colorflies = False
+        for n in range(0, fc):
+            if colorflies:
+                hue += 1.0 / fc
+                rgb = list(colorsys.hsv_to_rgb(hue, 1, 1))
+                rgb.append(1)
+                FreeFly.freeflies.append(FreeFly(
+                    color=tuple([int(round(c * 255.0)) for c in rgb]),
+                    loc=[random.randint(0,32),random.randint(0,32),32],
+                    lurk=0.2
+                ))
+            else:
+                FreeFly.freeflies.append(FreeFly(
+                    color=(255,255,255,255),
+                    loc=[random.randint(0,32),random.randint(0,32),32],
+                    lurk=0.2)
+                )
+
         super(LEDCube, self).__init__(*args, **kwargs)
 
     def reset(self):
@@ -309,14 +419,13 @@ class LEDCube(SampleBase):
                 for j in range(0, 2):
                     s = self.squares[j*3+i]
 
-                    s.draw(vect)
+                    s.draw(vect, gravity)
 
                     D = 0.000005
 
                     vect[0] += -D * gravity[0]
                     vect[1] += -D * gravity[1]
                     vect[2] += D * gravity[2]
-
 
                     tile = s.image
 
