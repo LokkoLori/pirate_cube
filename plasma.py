@@ -11,7 +11,8 @@ import math
 import random
 
 
-CUBEIMAGE = Image.open("ccube.png")
+CCUBEIMAGE = Image.open("ccube.png")
+QCUBEIMAGE = Image.open("qcube.png")
 
 class RunningPhase():
 
@@ -159,9 +160,14 @@ class Square():
         self.trans = data[-1]
 
         if self.trans:
-            self.ccube = CUBEIMAGE.transpose(self.trans)
+            self.ccube = CCUBEIMAGE.transpose(self.trans)
         else:
-            self.ccube = CUBEIMAGE
+            self.ccube = CCUBEIMAGE
+
+        if self.trans:
+            self.qcube = QCUBEIMAGE.transpose(self.trans)
+        else:
+            self.qcube = QCUBEIMAGE
 
     def getStickCoord(self):
 
@@ -183,12 +189,13 @@ class Square():
 
         huedrifting = False
         satdrifting = False
-        valuedrifting = True
+        valuedrifting = False
         drawplasma = True
         drawfreefiles = False
         fliesfade = True
         blurflies = False
-        showcube = True
+        showccube = False
+        showqcube = True
 
 
         for i in xrange(32/o):
@@ -236,7 +243,7 @@ class Square():
                     sat = 1.0
 
                 if valuedrifting:
-                    value = (1 - hue) * (0.25 + (math.sin(p * 2) + 1.0) * 0.5)
+                    value = (1 - hue) * (0.25 + (math.sin(p) + 1.0) * 0.5)
                 else:
                     value = (1 - hue)
 
@@ -300,8 +307,11 @@ class Square():
                 self.image.paste(s2image, (0,0), s2image)
                 del s2image
 
-        if showcube:
+        if showccube:
             self.image.paste(self.ccube, (0,0), self.ccube)
+
+        if showqcube:
+            self.image.paste(self.qcube, (0,0), self.qcube)
 
 
 
