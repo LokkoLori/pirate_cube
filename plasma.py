@@ -1,59 +1,19 @@
 import colorsys
-
-
 from samplebase import SampleBase
 import sys
 from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFilter
 from PIL import ImageChops
+from PIL.Image import ROTATE_90, ROTATE_180, ROTATE_270
 from accelero import get_accelvector
 import math
 import random
 
 
+CUBEIMAGE = Image.open("ccube.png")
 
-facematrix = {
-    "Up" : {
-        "my": ["Fr",0,1, 0,28,-1, 1,-4,-1], #ok
-        "py": ["Ba",1,1, 0,0,1, 1,-32,1], #ok ?
-        "mx": ["Le",0,0, 1,0,1, 0,-4,-1], #ok ?
-        "px": ["Ri",1,0, 1,28,-1, 0,-32,1] #ok ?
-    },
-    "Fr" : {
-        "my": ["Up",0,1, 0,28,-1, 1,-4,-1], #ok
-        "py": ["Do",1,1, 0,28,-1, 1,60,-1], #ok
-        "px": ["Le",1,0, 0,-32,1, 1,0,1], #ok
-        "mx": ["Ri",0,0, 0,32,1, 1,0,1] #ok
-    },
-    "Le" : {
-        "my": ["Up",0,1, 1,-4,-1, 0,0,1], #ok
-        "py": ["Do",1,1, 1,-32,1, 0,28,-1],#ok
-        "mx": ["Fr",0,0, 0,32,1, 1,0,1], #ok
-        "px": ["Ba",1,0, 0,-32,1, 1,0,1] #ok
-    },
-    "Ri": {
-        "my": ["Up",0,1, 1,32,1, 0,28,-1], #ok
-        "py": ["Do",1,1, 1,60,-1, 0,0,1], #ok
-        "mx": ["Ba",0,0, 0,32,1, 1,0,1], #ok
-        "px": ["Fr",1,0, 0,-32,1, 1,0,1] #ok
-    },
-    "Ba": {
-        "my": ["Up",0,1, 0,0,1, 1,32,1], #ok
-        "py": ["Do",1,1, 0,0,1, 1,-32,1],#ok
-        "mx": ["Le",0,0, 0,32,1, 1,0,1], #ok
-        "px": ["Ri",1,0, 0,-32,1, 1,0,1] #ok
-    },
-    "Do": {
-        "my": ["Ba",0,1, 0,0,1, 1,32,1], #ok
-        "py": ["Fr",1,1, 0,28,-1, 1,60,-1], #ok
-        "mx": ["Le",0,0, 1,28,-1, 0,32,1], #ok
-        "px": ["Ri",1,0, 1,0,1, 0,60,-1] #ok
-    }
-}
-
-
-class PulseAnim():
+class RunningPhase():
 
     def __init__(self, step):
         self.phase = 0
@@ -191,11 +151,17 @@ class Square():
         self.image = Image.new("RGBA", (32, 32))
 
         self.name = data[0]
-        self.coordtrs =  data[1:]
+        self.coordtrs =  data[1:-1]
         self.owner = owner
-        self.pa = PulseAnim(0.05)
+        self.pa = RunningPhase(0.05)
         self.ic = 0
         self.nc = 0
+        self.trans = data[-1]
+
+        if self.trans:
+            self.ccube = CUBEIMAGE.transpose(self.trans)
+        else:
+            self.ccube = CUBEIMAGE
 
     def getStickCoord(self):
 
@@ -213,14 +179,17 @@ class Square():
 
         #PLASMAIMAGE
         o = 2
+        interlaced = [True, True]
+
         huedrifting = False
         satdrifting = False
-        valuedrifting = False
-        interlaced = [True, True]
+        valuedrifting = True
         drawplasma = True
-        drawfreefiles = True
-        fliesfade = False
-        blurflies = True
+        drawfreefiles = False
+        fliesfade = True
+        blurflies = False
+        showcube = True
+
 
         for i in xrange(32/o):
             if interlaced[0] and (i + self.ic) % 2 != 0:
@@ -230,16 +199,14 @@ class Square():
                     continue
                 ian = [i*o, n*o]
                 crs = []
-                for c in self.coordtrs:
+                for cin in range(0, 3):
+                    c = self.coordtrs[cin]
                     ci = c[0]
                     if ci < 0:
                         ci = 0
-                    crs.append(ian[ci]*c[1]+c[2])
-                x, y, z = crs
+                    crs.append(ian[ci]*c[1]+c[2] + vect[cin])
 
-                x += vect[0]
-                y += vect[1]
-                z += vect[2]
+                x, y, z = crs
                 p = self.pa.phase
 
                 hue = math.sin(x * 0.3) + math.cos(y * 0.5) + math.sin(z * 0.25) + math.cos((x+y+z) * 0.16) + 0.5*math.sin(p)
@@ -304,7 +271,7 @@ class Square():
             if fliesfade:
                 if self.ic % 3 == 0:
                     fader = Image.new("RGBA", (32,32))
-                    fader = Image.blend(fader, self.fliesImage, alpha=0.6)
+                    fader = Image.blend(fader, self.fliesImage, alpha=0.8)
                     self.fliesImage.paste(fader)
                     del fader
                 simage = self.fliesImage.copy()
@@ -312,7 +279,7 @@ class Square():
                 self.fliesImageDraw = ImageDraw.Draw(self.fliesImage)
 
             elif blurflies:
-                simage = self.fliesImage.filter(ImageFilter.GaussianBlur(radius=3))
+                simage = self.fliesImage.filter(ImageFilter.GaussianBlur(radius=1))
                 self.fliesImage = Image.new("RGBA", (32, 32))
                 self.fliesImageDraw = ImageDraw.Draw(self.fliesImage)
             else:
@@ -328,23 +295,25 @@ class Square():
                 s2image = self.fliesImage
                 self.fliesImage = simage
 
-            self.image = ImageChops.multiply(self.image, self.fliesImage)
+            self.image = ImageChops.difference(self.image, self.fliesImage)
             if s2image:
                 self.image.paste(s2image, (0,0), s2image)
                 del s2image
+
+        if showcube:
+            self.image.paste(self.ccube, (0,0), self.ccube)
 
 
 
 class LEDCube(SampleBase):
 
     sidedata = [
-        ("Ba", (1, 1, 0), (-1, 0, 0), (0, 1, 0)),
-        ("Up", (1, 1, 0), (0, 1, 0), (-1, 0, 32)),
-        ("Fr", (1, 1, 0), (-1, 0, 32), (0, -1, 32)),
-        ("Ri", (-1, 0, 32), (1, -1, 32), (0, -1, 32)),
-        ("Do", (0, -1, 32), (1, -1, 32), (-1, 0, 0)),
-        ("Le", (-1, 0, 0), (1, -1, 32), (0, 1, 0))
-
+        ("Ba", (1, 1, 0), (-1, 0, 0), (0, 1, 0), ROTATE_270),
+        ("Up", (1, 1, 0), (0, 1, 0), (-1, 0, 32), ROTATE_270),
+        ("Fr", (1, 1, 0), (-1, 0, 32), (0, -1, 32), ROTATE_90),
+        ("Ri", (-1, 0, 32), (1, -1, 32), (0, -1, 32), ROTATE_90),
+        ("Do", (0, -1, 32), (1, -1, 32), (-1, 0, 0), None),
+        ("Le", (-1, 0, 0), (1, -1, 32), (0, 1, 0), ROTATE_270)
     ]
 
     def __init__(self, *args, **kwargs):
@@ -355,9 +324,9 @@ class LEDCube(SampleBase):
         self.shakec = 0
         self.frame = 0
 
-        fc = 12
+        fc = 20
         hue = 0
-        colorflies = False
+        colorflies = True
         for n in range(0, fc):
             if colorflies:
                 hue += 1.0 / fc
@@ -438,7 +407,7 @@ class LEDCube(SampleBase):
 
 # Main function
 if __name__ == "__main__":
-    sys.argv += ["--led-chain", "3", "--led-parallel", "2", "--led-brightness", "100", "--led-slowdown-gpio", "2"]
+    sys.argv += ["--led-chain", "3", "--led-parallel", "2", "--led-brightness", "75", "--led-slowdown-gpio", "2"]
     graphics_test = LEDCube()
     if (not graphics_test.process()):
         graphics_test.print_help()
