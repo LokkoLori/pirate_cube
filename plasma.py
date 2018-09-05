@@ -5,14 +5,33 @@ from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFilter
 from PIL import ImageChops
+from PIL import ImageFont
 from PIL.Image import ROTATE_90, ROTATE_180, ROTATE_270
 from accelero import get_accelvector
 import math
 import random
 
 
-CCUBEIMAGE = Image.open("ccube.png")
-QCUBEIMAGE = Image.open("qcube.png")
+# CCUBEIMAGE = Image.open("ccube.png")
+# QCUBEIMAGE = Image.open("qcube.png")
+# GRANDPIXIMAGE = Image.open("grandpix.png")
+
+IMAGES = [
+    ["ccube.png", None],
+    ["qcube.png", None],
+    ["grandpix.png", None]
+]
+
+for i in IMAGES:
+    i[1] = Image.open(i[0])
+
+s15font = ImageFont.truetype("square-deal.ttf", 15)
+
+TEXTS = [
+    ["Ri", "WHAT IF I TOLD YOU, THIS CUBE IS A DEMO PLATFORM?", 0, 18, s15font],
+    ["Ba", "WHAT IF I TOLD YOU, THIS CUBE IS A DEMO PLATFORM?", 0, 18, s15font],
+    ["Le", "WHAT IF I TOLD YOU, THIS CUBE IS A DEMO PLATFORM?", 0, 18, s15font]
+]
 
 class RunningPhase():
 
@@ -159,15 +178,14 @@ class Square():
         self.nc = 0
         self.trans = data[-1]
 
-        if self.trans:
-            self.ccube = CCUBEIMAGE.transpose(self.trans)
-        else:
-            self.ccube = CCUBEIMAGE
+        self.loadedimages = []
 
-        if self.trans:
-            self.qcube = QCUBEIMAGE.transpose(self.trans)
-        else:
-            self.qcube = QCUBEIMAGE
+        for i in IMAGES:
+            si = list(i)
+            if self.trans:
+                si[1] = si[1].transpose(self.trans)
+            self.loadedimages.append(si)
+
 
     def getStickCoord(self):
 
@@ -178,25 +196,13 @@ class Square():
         return -1
 
 
-    def draw(self, vect, gravity):
+    def drawplasma(self, vect):
 
-        # if self.name not in ["Up", "Ba", "Ri"]:
-        #     return
-
-        #PLASMAIMAGE
         o = 2
         interlaced = [True, True]
-
         huedrifting = False
         satdrifting = False
         valuedrifting = False
-        drawplasma = True
-        drawfreefiles = False
-        fliesfade = True
-        blurflies = False
-        showccube = False
-        showqcube = True
-
 
         for i in xrange(32/o):
             if interlaced[0] and (i + self.ic) % 2 != 0:
@@ -259,14 +265,77 @@ class Square():
                     self.plasmaimagearr[ian[0] + 0, ian[1] + 1] = pix
                     self.plasmaimagearr[ian[0] + 1, ian[1] + 1] = pix
 
+        self.image = self.plasmaimage.filter(ImageFilter.GaussianBlur())
+
         self.pa.nextpahse()
         self.ic += 1
         if self.ic % 2 == 0:
             self.nc += 1
 
 
+    def drawfreeflies(self, gravity):
+
+        fliesfade = False
+        blurflies = True
+
+        simage = None
+        if fliesfade:
+            if self.ic % 3 == 0:
+                fader = Image.new("RGBA", (32, 32))
+                fader = Image.blend(fader, self.fliesImage, alpha=0.8)
+                self.fliesImage.paste(fader)
+                del fader
+            simage = self.fliesImage.copy()
+            self.fliesImage = Image.new("RGBA", (32, 32))
+            self.fliesImageDraw = ImageDraw.Draw(self.fliesImage)
+
+        elif blurflies:
+            simage = self.fliesImage.filter(ImageFilter.GaussianBlur(radius=1))
+            self.fliesImage = Image.new("RGBA", (32, 32))
+            self.fliesImageDraw = ImageDraw.Draw(self.fliesImage)
+        else:
+            self.fliesImageDraw.rectangle((0, 0, 31, 31), fill=(0, 0, 0, 0))
+
+        for ff in FreeFly.freeflies:
+            ff.draw(self, gravity)
+
+        s2image = None
+        if fliesfade or blurflies:
+            simage.paste(self.fliesImage, (0, 0), self.fliesImage)
+            s2image = self.fliesImage
+            self.fliesImage = simage
+
+        self.image = ImageChops.difference(self.image, self.fliesImage)
+        if s2image:
+            self.image.paste(s2image, (0, 0), s2image)
+            del s2image
+
+
+    def drawtext(self):
+
+        textbmp = Image.new("RGBA", (32,32))
+        d = ImageDraw.Draw(textbmp)
+
+        for t in TEXTS:
+            if t[0] == self.name:
+                d.text((t[2], t[3]), t[1], font=t[4])
+
+        if self.trans:
+            textbmp = textbmp.transpose(self.trans)
+        self.image.paste(textbmp, (0, 0), textbmp)
+
+        del textbmp
+
+
+    def draw(self, vect, gravity):
+
+        drawplasma = False
+        drawfreefiles = True
+        showimages = ["qcube.png"]
+        showimages = []
+
         if drawplasma:
-            self.image = self.plasmaimage.filter(ImageFilter.GaussianBlur())
+            self.drawplasma(vect)
         else:
             d = ImageDraw.Draw(self.image)
             d.rectangle((0,0, 31, 31), fill=(0,0,0))
@@ -274,45 +343,16 @@ class Square():
         #fireflies
 
         if drawfreefiles:
-            simage = None
-            if fliesfade:
-                if self.ic % 3 == 0:
-                    fader = Image.new("RGBA", (32,32))
-                    fader = Image.blend(fader, self.fliesImage, alpha=0.8)
-                    self.fliesImage.paste(fader)
-                    del fader
-                simage = self.fliesImage.copy()
-                self.fliesImage = Image.new("RGBA", (32,32))
-                self.fliesImageDraw = ImageDraw.Draw(self.fliesImage)
+            self.drawfreeflies(gravity)
 
-            elif blurflies:
-                simage = self.fliesImage.filter(ImageFilter.GaussianBlur(radius=1))
-                self.fliesImage = Image.new("RGBA", (32, 32))
-                self.fliesImageDraw = ImageDraw.Draw(self.fliesImage)
-            else:
-                self.fliesImageDraw.rectangle((0,0,31,31), fill=(0,0,0,0))
+        for si in showimages:
+            for i in self.loadedimages:
+                if i[0] == si:
+                    self.image.paste(i[1], (0,0), i[1])
+                    break
 
 
-            for ff in FreeFly.freeflies:
-                ff.draw(self, gravity)
-
-            s2image = None
-            if fliesfade or blurflies:
-                simage.paste(self.fliesImage, (0,0), self.fliesImage)
-                s2image = self.fliesImage
-                self.fliesImage = simage
-
-            self.image = ImageChops.difference(self.image, self.fliesImage)
-            if s2image:
-                self.image.paste(s2image, (0,0), s2image)
-                del s2image
-
-        if showccube:
-            self.image.paste(self.ccube, (0,0), self.ccube)
-
-        if showqcube:
-            self.image.paste(self.qcube, (0,0), self.qcube)
-
+        self.drawtext()
 
 
 class LEDCube(SampleBase):
@@ -334,7 +374,7 @@ class LEDCube(SampleBase):
         self.shakec = 0
         self.frame = 0
 
-        fc = 20
+        fc = 30
         hue = 0
         colorflies = True
         for n in range(0, fc):
@@ -366,6 +406,8 @@ class LEDCube(SampleBase):
 
         vect = [0,0,0]
 
+        scroll = 0
+
         while True:
 
             if self.kill:
@@ -393,6 +435,17 @@ class LEDCube(SampleBase):
                 self.shakec -= 2
                 if self.shakec < 0:
                     self.shakec = 0
+
+            scroll += 1
+
+            offs = 32
+            for t in TEXTS:
+                fo = offs - int(scroll)
+                t[2] = fo
+                offs += 32
+
+            if scroll == 400:
+                scroll = 0
 
             for i in range(0, 3):
                 for j in range(0, 2):
