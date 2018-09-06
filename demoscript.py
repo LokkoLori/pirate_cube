@@ -13,9 +13,10 @@ Do = None
 
 class SCROLLER(plasma.DEMOSCRIPT_ELEMENT):
 
-    def __init__(self, text, start, end):
+    def __init__(self, text, speed, start, end):
         super(SCROLLER, self).__init__(start, end)
         self.text = text
+        self.speed = speed
 
     def at_start(self):
         pass
@@ -27,7 +28,7 @@ class SCROLLER(plasma.DEMOSCRIPT_ELEMENT):
 
         offs = 32
         for s in sides:
-            s.texts = [(self.text, offs - int(count / 2), 10, plasma.s15font)]
+            s.texts = [(self.text, offs - int(count * self.speed), 10, plasma.s15font)]
             offs += 32
 
     def at_end(self):
@@ -54,13 +55,13 @@ class WONDERING(plasma.DEMOSCRIPT_ELEMENT):
         if count == 0:
             return
 
-        if count > self.end - self.start - 350:
+        if count > self.end - self.start - 100:
             Ba.images_shown = [[self.face3, 0, 0]]
             return
 
-        if count % 120 == 0:
+        if count % 60 == 0:
             Ba.images_shown = [[self.face2, 0, 0]]
-        if count % 135 == 0:
+        if count % 75 == 0:
             Ba.images_shown = [[self.face1, 0, 0]]
 
 
@@ -130,17 +131,18 @@ class STARSFIELD(plasma.DEMOSCRIPT_ELEMENT):
         DEMO_CUBE.freeflies += stars
 
         for ff in DEMO_CUBE.freeflies:
-            ff.blinking = True
+            ff.blinking = False
 
-            D = 0.075
+            M = 0.075
+            D = 0.0025
             if ff.onSquare(Le):
-                ff.vel[1] = D + random.uniform(0,D * 5)
+                ff.vel[1] = M + random.uniform(0,D * ff.color[0])
             elif ff.onSquare(Ba):
-                ff.vel[0] = -D - random.uniform(0,D * 5)
+                ff.vel[0] = -M - random.uniform(0,D * ff.color[0])
             elif ff.onSquare(Ri):
-                ff.vel[1] = -D - random.uniform(0,D * 5)
+                ff.vel[1] = -M - random.uniform(0,D * ff.color[0])
             elif ff.onSquare(Fr):
-                ff.vel[0] = D + random.uniform(0,D * 5)
+                ff.vel[0] = M + random.uniform(0,D * ff.color[0])
 
         sides = [Up, Le, Ba, Ri, Fr]
         for s in sides:
@@ -173,10 +175,10 @@ def assamble_demo(cube):
     global Do
     Do = DEMO_CUBE.getSquare("Do")
 
-    start = 1600
+    start = 0
     DEMO_CUBE.demo_counter = start
 
-    cube.demo_elements.append(SCROLLER("WHAT IF I TOLD YOU, THIS CUBE IS A DEMO PLATFORM?", 0, 800))
-    cube.demo_elements.append(WONDERING(720, 1200))
-    cube.demo_elements.append(SCROLLER("WHAT IS IT FOR?   CAN IT SHOW STARS?", 1150, 2000))
-    cube.demo_elements.append(STARSFIELD(1600, 10000))
+    cube.demo_elements.append(SCROLLER("WHAT IF I TOLD YOU, THIS CUBE IS A DEMO PLATFORM?", 0.5, 0, 800))
+    cube.demo_elements.append(WONDERING(720, 1000))
+    cube.demo_elements.append(STARSFIELD(900, 2000))
+    cube.demo_elements.append(SCROLLER("IT SHOWS STARS", 0.75, 960, 2000))

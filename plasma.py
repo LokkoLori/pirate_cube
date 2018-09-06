@@ -159,7 +159,7 @@ class FreeFly():
 
         color = self.color
         if self.blinking and random.randint(0, 3) == 3:
-            con = random.randint(-64, 64)
+            con = random.randint(-128, 128)
             color = []
             for c in self.color:
                 c = c + con
