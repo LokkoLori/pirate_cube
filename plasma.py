@@ -102,41 +102,6 @@ class FreeFly():
 
     def move(self, oncube):
 
-        # stick_coord = square.getStickCoord()
-        #
-        # D = - 0.0000005
-        #
-        # sgrav = list(grav)
-        #
-        # sgrav[0] = D * grav[0]
-        # sgrav[1] = D * grav[1]
-        # sgrav[2] = - D * grav[2]
-        #
-        # for coi in range(0, 3):
-        #     if coi != stick_coord:
-        #         self.vel[coi] += random.uniform(-self.lurk, self.lurk) + sgrav[coi]
-        #
-        #     self.vel[coi] *= 0.998
-        #
-        #     if self.vel[coi] > 1:
-        #         self.vel[coi] = 1
-        #     elif self.vel[coi] < -1:
-        #         self.vel[coi] = -1
-        #
-        # firstonsqare = None
-        #
-        # for other in square.owner.freeflies:
-        #     if other == self or not other.onSquare(square):
-        #         continue
-        #
-        #     firstonsqare = other
-        #     break
-        #
-        # if firstonsqare:
-        #     for v in range(0, 3):
-        #         self.vel[v] += 0.005 * (firstonsqare.vel[v] - self.vel[v])
-        #         self.vel[v] += 0.005 * (firstonsqare.loc[v] - self.loc[v])
-
         self.loc[0] += self.vel[0]
         self.loc[1] += self.vel[1]
         self.loc[2] += self.vel[2]
@@ -180,22 +145,31 @@ class FreeFly():
 class Square():
 
     def __init__(self, data, owner):
-        self.plasmaimage = Image.new("RGBA", (32, 32))
-        self.plasmaimagearr = self.plasmaimage.load()
-        self.fliesImage = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
-        self.fliesImageDraw = ImageDraw.Draw(self.fliesImage, mode="RGBA")
+
         self.image = Image.new("RGBA", (32, 32))
-        self.drawlayer = Image.new("RGBA", (32, 32))
-        self.darwer = ImageDraw.Draw(self.drawlayer, mode="RGBA")
 
         self.name = data[0]
         self.coordtrs =  data[1:-1]
         self.owner = owner
+        self.trans = data[-1]
+
+        self.matrixiImage = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
+        self.matrixImageArr = self.matrixiImage.load()
+        self.matrix_shown = False
+        self.matrix_dropping = False
+        self.matrix_framedrop = False
+        self.matrix = []
+        for i in range(0, 34):
+            row = []
+            self.matrix.append(row)
+            for j in range(0, 32):
+                row.append([0, 0.0])
+
+        self.plasmaimage = Image.new("RGBA", (32, 32))
+        self.plasmaimagearr = self.plasmaimage.load()
         self.pa = RunningPhase(0.05)
         self.ic = 0
         self.nc = 0
-        self.trans = data[-1]
-
         self.plasma_offset = [0, 0, 0]
         self.plasma_flowing = False
         self.plasma_interlaced = False
@@ -204,11 +178,16 @@ class Square():
         self.plasma_valuedrifting = False
         self.plasma_shown = False
 
+        self.fliesImage = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
+        self.fliesImageDraw = ImageDraw.Draw(self.fliesImage, mode="RGBA")
         self.fly_tails_faded = False
         self.fly_tails_blurred = False
         self.flies_shown = False
         self.flies_diffblended = False
 
+        self.drawlayer = Image.new("RGBA", (32, 32))
+        self.darwer = ImageDraw.Draw(self.drawlayer, mode="RGBA")
+        self.drawdiffed = False
         self.images_shown = []
 
         self.texts = []
@@ -221,14 +200,65 @@ class Square():
 
         return -1
 
+    def drawmatrix(self, grav):
 
-    def drawplasma(self, gravity):
+        valmin = 10
+        valmax = 70
+        dense = 100
 
-        D = 0.00003
-        if self.plasma_flowing:
-            self.plasma_offset[0] += -D * gravity[0]
-            self.plasma_offset[1] += -D * gravity[1]
-            self.plasma_offset[2] += D * gravity[2]
+        def drawdot(x,y, front=False):
+
+            if y < 1 or 32 < y:
+                return
+
+            val = self.matrix[y][x]
+            if val[0] == 0:
+                self.matrixImageArr[x, y-1] = (0,0,0,0)
+
+            if front:
+                g = int(val[1] * 255)
+                self.matrixImageArr[x, y-1] = (g,g,g,255)
+                drawdot(x, y-1)
+            else:
+                g = int((val[0]*1.0) * (1.0/valmax) * val[1] * 255)
+                self.matrixImageArr[x, y-1] = (0, g, 0, 255)
+
+
+        if self.owner.demo_counter % self.matrix_framedrop == 0:
+
+            for y in reversed(range(1,34)):
+                for x in range(0,32):
+                    me = self.matrix[y][x]
+                    ab = self.matrix[y-1][x]
+                    if me[0] < ab[0]:
+                        self.matrix[y][x] = [ab[0],random.uniform(0.2,1)]
+                        drawdot(x,y, True)
+                    elif 0 < me[0]:
+                        me[0] -= 1
+                        if me[0] == 0:
+                            me[1] = 0.0
+                            drawdot(x,y)
+                        elif random.randint(0, me[0]) == 0:
+                            me[1] = random.uniform(0.2,1)
+                            drawdot(x,y)
+
+            #new drops
+            for x in range(0,32):
+                if self.matrix_dropping and random.randint(0, dense) == 0:
+                    self.matrix[0][x] = [random.randint(valmin,valmax), random.uniform(0.2,1)]
+                    drawdot(x,0,True)
+                else:
+                    val = self.matrix[0][x]
+                    if val[0] > 0:
+                        val[0] -= 1
+
+        if self.trans:
+            self.image = self.matrixiImage.transpose(self.trans)
+        else:
+            self.image = self.matrixiImage
+
+
+    def drawplasma(self):
 
         o = 2
         interlaced = [True, True]
@@ -308,7 +338,7 @@ class Square():
         if self.fly_tails_faded:
             if self.ic % 3 == 0:
                 fader = Image.new("RGBA", (32, 32))
-                fader = Image.blend(fader, self.fliesImage, alpha=0.8)
+                fader = Image.blend(fader, self.fliesImage, alpha=0.85)
                 self.fliesImage.paste(fader)
                 del fader
             simage = self.fliesImage.copy()
@@ -344,7 +374,14 @@ class Square():
     def drawtext(self):
 
         for t in self.texts:
-            self.drawer.text((t[1], t[2]), t[0], font=t[3])
+
+            if len(t) == 4:
+                timg = Image.new("RGBA", (10*len(t[0]), 20))
+                d = ImageDraw.Draw(timg, mode="RGBA")
+                d.text((0,0),t[0],font=t[3])
+                t.append(timg)
+
+            self.drawlayer.paste(t[4], (t[1], t[2]), t[4])
 
 
     def drawimages(self):
@@ -354,11 +391,14 @@ class Square():
 
     def draw(self, gravity):
 
-        if self.plasma_shown:
-            self.drawplasma(gravity)
+        if self.matrix_shown:
+            self.drawmatrix(gravity)
         else:
             d = ImageDraw.Draw(self.image)
-            d.rectangle((0,0, 31, 31), fill=(0,0,0))
+            d.rectangle((0, 0, 31, 31), fill=(0, 0, 0))
+
+        if self.plasma_shown:
+            self.drawplasma()
 
         if self.flies_shown:
             self.drawfreeflies(gravity)
@@ -371,7 +411,12 @@ class Square():
 
         if self.trans:
             self.drawlayer = self.drawlayer.transpose(self.trans)
-        self.image.paste(self.drawlayer, (0, 0), self.drawlayer)
+
+        if self.drawdiffed:
+            self.image = ImageChops.difference(self.image, self.drawlayer)
+        else:
+            self.image.paste(self.drawlayer, (0,0), self.drawlayer)
+
 
 
 class DEMOSCRIPT_ELEMENT(object):
@@ -379,6 +424,7 @@ class DEMOSCRIPT_ELEMENT(object):
     def __init__(self, start, end):
         self.start = start
         self.end = end
+        self.length = end - start
 
     def at_start(self):
         pass
