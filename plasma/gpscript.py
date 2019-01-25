@@ -119,7 +119,7 @@ class FIREFLY_DANCE(gpdemo.DEMOSCRIPT_ELEMENT):
 
             stick_coord = square.getStickCoord()
 
-            D = - 0.0000003
+            D = 0.01
 
             sgrav = list(gravity)
 

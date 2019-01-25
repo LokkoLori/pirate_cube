@@ -521,7 +521,8 @@ class LEDCube(SampleBase):
                 self.shakec += 1
 
                 if 40 < self.shakec:
-                    self.squares[0].restart()
+                    print "restart"
+                    #self.squares[0].restart()
 
             else:
                 self.shakec -= 2

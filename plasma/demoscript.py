@@ -227,7 +227,7 @@ class FIREFLY_DANCE(plasma.DEMOSCRIPT_ELEMENT):
 
             stick_coord = square.getStickCoord()
 
-            D = - 0.0000003
+            D = 0.01
 
             sgrav = list(gravity)
 
@@ -363,7 +363,7 @@ def assamble_demo(cube):
     cube.demo_elements.append(STARSFIELD(al(0), al(0)+750))
     cube.demo_elements.append(SCROLLER("              AHWWW ... SCROLLING STARS, HUH?        REALLY?!!     COS ITS BOOOOOORING !!!", 0.8, 15, plasma.s15font, al(0), al(750)))
     cube.demo_elements.append(PAINT_STARS(al(0), al(0)+450))
-    cube.demo_elements.append(SCROLLER("         MEEEEH ... COLORED STARS ... IS THIS ALL YOU KNOW?", 1, 15, plasma.s15font, al(0), al(450)))
+    cube.demo_elements.append(SCROLLER("         MEEEEH ... COLORED STARS ... IS THIS ALL YOU GOT?", 1, 15, plasma.s15font, al(0), al(450)))
     cube.demo_elements.append(FIREFLY_DANCE(0.1, al(0), al(0)+1050))
     cube.demo_elements.append(SCROLLER("                      WOOOOOW ... DANCING COLOR BUGS!", 2, 15, plasma.s15font, al(0), al(200)))
 
@@ -375,7 +375,7 @@ def assamble_demo(cube):
     cube.demo_elements.append(SWITCH(switchtoblur, al(0), al(0)))
     cube.demo_elements.append(SCROLLER("        WAIT ... ARE THEY REALLY FARTING COLORED FOG ??!  ...   EVEN BETTER!                OKAY, LETS SAY SOMETHING ABOUT THE HARDWARE!        IT HAS 6 LED PANELS, EACH WITH 32x32 PIXELS  ...  POWERD BY A RASBERRY PI BUILT INSIDE        AND WHAT CAN WE USE IT FOR?", 2, 15, plasma.s15font, al(0), al(850)))
 
-    cube.demo_elements.append(PLASMA(0.00003, al(0), al(0)+390))
+    cube.demo_elements.append(PLASMA(-0.5, al(0), al(0)+390))
     cube.demo_elements.append(SWITCH(createbugs, al(0), al(0)))
     cube.demo_elements.append(SHOW_IMAGE([Up, Le, Ba, Ri, Fr], "qcube.png", 0, 0, "", al(0), al(50)))
     cube.demo_elements.append(SHOW_IMAGE([Up, Le, Ba, Ri, Fr], "qcube.png", 0, 0, "", al(5), al(5)))

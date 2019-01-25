@@ -189,13 +189,13 @@ class Square():
 
         gl = math.sqrt(gx * gx + gy * gy + gz * gz)
 
-        dx = gx / gl
+        dx = -gx / gl
         dy = gy / gl
 
         self.edgeCase(hero, dx, dy)
 
-        dx = D * treshold(dx, 0.1, 0.5)
-        dy = D * treshold(dy, 0.1, 0.5)
+        dx = D * treshold(dx, 0.175, 0.5)
+        dy = D * treshold(dy, 0.175, 0.5)
 
         l = self.mazeWalls.getline(int(hero.x) - 1, int(hero.y), 4, vertical=True).replace(self.colorscheme, "")
         r = self.mazeWalls.getline(int(hero.x) + 4, int(hero.y), 4, vertical=True).replace(self.colorscheme, "")
@@ -326,12 +326,12 @@ class LEDCube(SampleBase):
         image = Image.new("RGB", (96, 64))
 
         vects = [
-            [[-1, 0], [-1, 2], [1, 1], [ROTATE_270]],
-            [[-1, 0], [1, 1], [1, 2], [ROTATE_270]],
-            [[1, 0], [-1, 2], [-1, 1], [ROTATE_90]],
-            [[-1, 1], [-1, 2], [-1, 0], [ROTATE_90]],
-            [[-1, 0], [-1, 1], [-1, 2], [ROTATE_180]],
-            [[1, 1], [-1, 2], [1, 0], [ROTATE_270]]
+            [[1, 0], [1, 2], [-1, 1], [ROTATE_270]],
+            [[1, 0], [1, 1], [1, 2], [ROTATE_270]],
+            [[-1, 0], [1, 2], [1, 1], [ROTATE_90]],
+            [[1, 1], [1, 2], [1, 0], [ROTATE_90]],
+            [[1, 0], [-1, 1], [-1, 2], [ROTATE_180]],
+            [[-1, 1], [1, 2], [-1, 0], [ROTATE_270]]
         ]
 
         while True:
@@ -351,10 +351,12 @@ class LEDCube(SampleBase):
 
             diffv = math.sqrt(pdx*pdx + pdy*pdy + pdz*pdz)
             self.preg  = list(gravity)
-            if 1500 < diffv:
+            if 0.1 < diffv:
                 self.shakec += 1
 
-                if 40 < self.shakec:
+                if 80 < self.shakec:
+                    print "restart"
+                    self.shakec = 0
                     self.squares[0].restart()
 
             else:
