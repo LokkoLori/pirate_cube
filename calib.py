@@ -1,17 +1,20 @@
 import json
-import numpy as np
+import numpy
 import math
 import time
+import sys
 
-#from accelero import get_accelvector
-
+try:
+    from accelero import get_pure_accelero
+except Exception as e:
+    pass
 
 def measrun():
 
     v = [0,0,0]
     mc = 100
     for i in range(0, mc):
-        m = get_accelvector()
+        m = get_pure_accelero()
         v[0] += m[0]
         v[1] += m[1]
         v[2] += m[2]
@@ -24,109 +27,81 @@ def measrun():
 
 def measure_still():
 
-    sides = ["Up", "Ri", "Ba"]
+    sides = ["Le", "Ba", "Do", "Ri", "Fr", "Up", "LeBaDo", "RiFrUp"]
 
-    vs = []
+    vs = {}
     for s in sides:
         print s
         time.sleep(5)
         v = measrun()
         print v
-        vs.append(v)
+        vs[s] = v
 
     with open("accel.json", "w") as f:
         json.dump(vs, f)
+
+Sides = ["Le", "Ri", "Ba", "Fr", "Do", "Up", "LeBaDo", "RiFrUp"]
+
+d = 1 / math.sqrt(3)
+
+TV = {
+    "Le": [1.0, 0.0, 0.0],
+    "Ri": [-1.0, 0.0, 0.0],
+    "Ba": [0.0, 1.0, 0.0],
+    "Fr": [0.0, -1.0, 0.0],
+    "Do": [0.0, 0.0, 1.0],
+    "Up": [0.0, 0.0, -1.0],
+    "LeBaDo": [d, d, d],
+    "RiFrUp": [-d, -d, -d]
+}
 
 def transform():
 
     with open("accel.json") as f:
         vs = json.load(f)
 
-    for v in vs:
-        print v
+    am = []
+    bm = []
+    for s in Sides:
+        l = [1.0*v for v in vs[s]]
+        am.append([1.0*v for v in vs[s]])
+        bm.append([1.0*v for v in TV[s]])
 
-        x, y, z = v
-        l = math.sqrt(x*x + y*y + z*z)
+    Y = numpy.matrix(am)
+    X = numpy.matrix(bm)
 
-        print l
+    A1 = numpy.linalg.lstsq(Y,X)[0]
 
-        x = x / l
-        y = y / l
-        z = z / l
+    t = numpy.matmul(am[0], A1)
+    print t
+    t = numpy.matmul(am[1], A1)
+    print t
+    t = numpy.matmul(am[2], A1)
+    print t
+    t = numpy.matmul(am[3], A1)
+    print t
+    t = numpy.matmul(am[4], A1)
+    print t
+    t = numpy.matmul(am[5], A1)
+    print t
+    t = numpy.matmul(am[6], A1)
+    print t
+    t = numpy.matmul(am[7], A1)
+    print t
 
-        print "coord {}, {}, {}".format(x, y, z)
-
-        v[0] = x
-        v[1] = y
-        v[2] = z
-
-
-    zrot = math.atan(vs[0][1]/vs[0][0])
-    yrot = np.pi/2 - math.atan(vs[0][2]/math.sqrt(vs[0][0]*vs[0][0]+vs[0][1]*vs[0][1]))
-
-    #wild guess
-    z2rot = np.pi/2
-
-    print "rot : {}, {}".format(zrot, yrot)
-
-    zrotm = [
-        [math.cos(zrot), -math.sin(zrot), 0],
-        [math.sin(zrot), math.cos(zrot), 0],
-        [0, 0, 1]
-    ]
-
-    for v in vs:
-
-        vr = np.matmul(v, zrotm)
-
-        v[0] = vr[0]
-        v[1] = vr[1]
-        v[2] = vr[2]
-
-        print "zrot coord {}, {}, {}".format(v[0], v[1], v[2])
-
-    yrotm = [
-        [math.cos(yrot), 0, math.sin(yrot)],
-        [0, 1, 0],
-        [-math.sin(yrot), 0, math.cos(yrot)]
-    ]
-
-    for v in vs:
-        vr = np.matmul(v, yrotm)
-
-        v[0] = vr[0]
-        v[1] = vr[1]
-        v[2] = vr[2]
-
-        print "yrot coord {}, {}, {}".format(v[0], v[1], v[2])
-
-    z2rotm = [
-        [math.cos(z2rot), -math.sin(z2rot), 0],
-        [math.sin(z2rot), math.cos(z2rot), 0],
-        [0, 0, 1]
-    ]
-
-    for v in vs:
-        vr = np.matmul(v, z2rotm)
-
-        v[0] = vr[0]
-        v[1] = vr[1]
-        v[2] = vr[2]
-
-        print "z2rot coord {}, {}, {}".format(v[0], v[1], v[2])
-
-    arotm = np.matmul(zrotm, yrotm)
-    arotm = np.matmul(arotm, z2rotm)
-
-    arotm = list(arotm)
-    for i in range(0, len(arotm)):
-        arotm[i] = list(arotm[i])
+    arotm = []
+    for i in range(0, len(A1)):
+        row = numpy.array(A1[i]).tolist()[0]
+        arotm.append(row)
 
     with open("rotm.json", "w") as f:
         json.dump(arotm, f)
 
+
+
 if __name__ == "__main__":
-    #measure_still()
+    if "-m" in sys.argv:
+        measure_still()
     transform()
 
 
