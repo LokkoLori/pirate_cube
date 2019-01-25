@@ -51,12 +51,12 @@ class Square():
         except Exception as e:
             y = 0
 
-        fill = (255, 0, 0)
-        if 0 < gravity[2]:
-            fill = (0, 0, 255)
+        fill = (0, 0, 255)
+        if 0 < gz:
+            fill = (255, 0, 0)
 
         px = x*16 + 16
-        py = y*16 + 16
+        py = -y*16 + 16
 
         d.ellipse((px-2, py-2, px+2, py+2), fill=fill, outline=(0, 0, 0))
 
@@ -64,7 +64,7 @@ class Square():
         dy = gy / gl
 
         dx = D * normtobox(dx, 0.5)
-        dy = D * normtobox(dy, 0.5)
+        dy = -D * normtobox(dy, 0.5)
 
         self.creture[0] += dx
         self.creture[1] += dy
@@ -89,12 +89,12 @@ class LEDCube(SampleBase):
         image = Image.new("RGB", (96, 64))
 
         vects = [
-            [[-1, 0], [-1, 2], [1, 1], [ROTATE_270]],
-            [[-1, 0], [1, 1], [1, 2], [ROTATE_270]],
-            [[1, 0], [-1, 2], [-1, 1], [ROTATE_90]],
-            [[-1, 1], [-1, 2], [-1, 0], [ROTATE_90]],
-            [[-1, 0], [-1, 1], [-1, 2], [ROTATE_180]],
-            [[1, 1], [-1, 2], [1, 0], [ROTATE_270]]
+            [[1, 0], [1, 2], [-1, 1], [ROTATE_270]],
+            [[1, 0], [1, 1], [1, 2], [ROTATE_270]],
+            [[-1, 0], [1, 2], [1, 1], [ROTATE_90]],
+            [[1, 1], [1, 2], [1, 0], [ROTATE_90]],
+            [[1, 0], [-1, 1], [-1, 2], [ROTATE_180]],
+            [[-1, 1], [1, 2], [-1, 0], [ROTATE_270]]
         ]
 
         while True:
