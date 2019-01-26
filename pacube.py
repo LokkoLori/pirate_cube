@@ -352,10 +352,11 @@ class LEDCube(SampleBase):
 
             diffv = math.sqrt(pdx*pdx + pdy*pdy + pdz*pdz)
             self.preg  = list(gravity)
-            if 1500 < diffv:
+            if 0.1 < diffv:
                 self.shakec += 1
 
                 if 40 < self.shakec:
+                    self.shakec = 0
                     self.squares[0].restart()
 
             else:
