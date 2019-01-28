@@ -9,16 +9,25 @@ PORT = 8088
 def startcmd(path):
     return "/usr/bin/python {}/{}".format(os.path.dirname(os.path.abspath(__file__)), path)
 
-procs = (
-    ("/logo", startcmd("../plasma/logodemo.py")),
-    ("/grandpix", startcmd("../plasma/gpdemo.py")),
-    ("/plasma", startcmd("../plasma/plasma.py")),
-    ("/pacube", startcmd("../pacube.py")),
-    ("/gravitydot", startcmd("../gravitydot.py")),
-    ("/stop", "echo pixxlcube stoped")
+apps = (
+    ("logo", startcmd("../plasma/logodemo.py")),
+    ("grandpix", startcmd("../plasma/gpdemo.py")),
+    ("plasma", startcmd("../plasma/plasma.py")),
+    ("pacube", startcmd("../pacube.py")),
+    ("gravitydot", startcmd("../gravitydot.py")),
+    ("stop", 'echo "pixxlcube stopped"')
 )
 
 apro = None
+
+def start_app(cmd):
+    global apro
+    if apro:
+        os.killpg(os.getpgid(apro.pid), signal.SIGTERM)
+        apro = None
+        time.sleep(2)
+    print cmd
+    apro = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True, preexec_fn=os.setsid)
 
 class PiXXLCubeServer(BaseHTTPRequestHandler):
 
@@ -31,19 +40,12 @@ class PiXXLCubeServer(BaseHTTPRequestHandler):
         if self.path == "/favicon.ico":
             return ""
 
-        global apro
-        if self.path!="/" and apro:
-            os.killpg(os.getpgid(apro.pid), signal.SIGTERM)
-            apro = None
-            time.sleep(2)
-
-        for proc in procs:
-            if self.path == proc[0]:
-                apro = subprocess.Popen(proc[1], stdout=subprocess.PIPE, shell=True, preexec_fn=os.setsid)
-
         links = ""
-        for proc in procs:
-            links += "<a href='{0}'>{0}</a><br/>\n".format(proc[0])
+        for appd in apps:
+            if "/"+appd[0] == self.path:
+                start_app(appd[1])
+            links += "<a href='/{0}'>{0}</a><br/>\n".format(appd[0])
+
         return "<html><head><style>a {{font-size: 5em}}</style></head><body><h1>Say hello to my PiXXL Cube!</h1><br/>{}</body></html>".format(links)
 
     def do_GET(self):
