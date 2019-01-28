@@ -6,12 +6,15 @@ import time
 
 PORT = 8088
 
+def startcmd(path):
+    return "/usr/bin/python {}/{}".format(os.path.dirname(os.path.abspath(__file__)), path)
+
 procs = (
-    ("/logo", "python ../plasma/logodemo.py"),
-    ("/grandpix", "python ../plasma/gpdemo.py"),
-    ("/plasma", "python ../plasma/plasma.py"),
-    ("/pacube", "python ../pacube.py"),
-    ("/gravitydot", "python ../gravitydot.py"),
+    ("/logo", startcmd("../plasma/logodemo.py")),
+    ("/grandpix", startcmd("../plasma/gpdemo.py")),
+    ("/plasma", startcmd("../plasma/plasma.py")),
+    ("/pacube", startcmd("../pacube.py")),
+    ("/gravitydot", startcmd("../gravitydot.py")),
     ("/stop", "echo pixxlcube stoped")
 )
 
