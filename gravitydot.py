@@ -1,6 +1,6 @@
 from samplebase import SampleBase
 from rgbmatrix import graphics
-import time
+import os
 import sys
 from PIL import Image
 from PIL import ImageDraw
@@ -9,6 +9,8 @@ from PIL.Image import FLIP_LEFT_RIGHT, FLIP_TOP_BOTTOM, ROTATE_90, ROTATE_180, R
 from accelero import get_accelvector
 import math
 
+if os.path.dirname(__file__):
+    os.chdir(os.path.dirname(__file__))
 
 arialfont = ImageFont.truetype("arial.ttf", 18)
 

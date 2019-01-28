@@ -10,7 +10,10 @@ from PIL.Image import ROTATE_90, ROTATE_180, ROTATE_270
 from accelero import get_accelvector
 import math
 import random
+import os
 
+if os.path.dirname(__file__):
+    os.chdir(os.path.dirname(__file__))
 
 s15font = ImageFont.truetype("square-deal.ttf", 15)
 DEMO_CUBE = None
@@ -550,7 +553,7 @@ class LEDCube(SampleBase):
 
 # Main function
 if __name__ == "__main__":
-    sys.argv += ["--led-chain", "3", "--led-parallel", "2", "--led-brightness", "75", "--led-slowdown-gpio", "2"]
+    sys.argv += ["--led-chain", "3", "--led-parallel", "2", "--led-brightness", "100", "--led-slowdown-gpio", "2"]
     DEMO_CUBE = LEDCube()
     import gpscript
     gpscript.assamble_demo(DEMO_CUBE)

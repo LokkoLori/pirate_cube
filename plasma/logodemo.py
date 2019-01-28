@@ -442,7 +442,7 @@ class DEMOSCRIPT_ELEMENT(object):
 
         if counter < self.start:
             return
-        if counter > self.end:
+        if self.end != -1 and counter > self.end:
             return
 
         if counter == self.start:
@@ -524,7 +524,8 @@ class LEDCube(SampleBase):
                 self.shakec += 1
 
                 if 40 < self.shakec:
-                    self.squares[0].restart()
+                    print "restart"
+                    #self.squares[0].restart()
 
             else:
                 self.shakec -= 2
@@ -554,7 +555,7 @@ class LEDCube(SampleBase):
 if __name__ == "__main__":
     sys.argv += ["--led-chain", "3", "--led-parallel", "2", "--led-brightness", "100", "--led-slowdown-gpio", "2"]
     DEMO_CUBE = LEDCube()
-    import demoscript
-    demoscript.assamble_demo(DEMO_CUBE)
+    import logoscript
+    logoscript.assamble_demo(DEMO_CUBE)
     if (not DEMO_CUBE.process()):
         DEMO_CUBE.print_help()

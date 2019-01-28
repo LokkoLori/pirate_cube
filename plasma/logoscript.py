@@ -1,4 +1,4 @@
-import gpdemo
+import logodemo
 import random
 import colorsys
 import sys
@@ -14,7 +14,7 @@ Fr = None
 Do = None
 
 
-class MATRIXSHOW(gpdemo.DEMOSCRIPT_ELEMENT):
+class MATRIXSHOW(logodemo.DEMOSCRIPT_ELEMENT):
 
     def __init__(self, squares, framedrop, stopbbeforend, start, end):
         super(MATRIXSHOW, self).__init__(start, end)
@@ -38,7 +38,7 @@ class MATRIXSHOW(gpdemo.DEMOSCRIPT_ELEMENT):
             s.matrix_shown = False
 
 
-class SCROLLER(gpdemo.DEMOSCRIPT_ELEMENT):
+class SCROLLER(logodemo.DEMOSCRIPT_ELEMENT):
 
     def __init__(self, text, speed, y, font, start, end):
         super(SCROLLER, self).__init__(start, end)
@@ -69,7 +69,7 @@ class SCROLLER(gpdemo.DEMOSCRIPT_ELEMENT):
         Le.texts.remove(self.text3)
 
 
-class SHOW_IMAGE(gpdemo.DEMOSCRIPT_ELEMENT):
+class SHOW_IMAGE(logodemo.DEMOSCRIPT_ELEMENT):
 
     def __init__(self, squares, fn, x, y, blend, start, end):
         super(SHOW_IMAGE, self).__init__(start, end)
@@ -90,7 +90,7 @@ class SHOW_IMAGE(gpdemo.DEMOSCRIPT_ELEMENT):
             s.images_shown = [_ for _ in s.images_shown if _[4] != self]
 
 
-class FIREFLY_DANCE(gpdemo.DEMOSCRIPT_ELEMENT):
+class FIREFLY_DANCE(logodemo.DEMOSCRIPT_ELEMENT):
 
     def __init__(self, lurk, start, end):
         super(FIREFLY_DANCE, self).__init__(start, end)
@@ -161,7 +161,7 @@ class FIREFLY_DANCE(gpdemo.DEMOSCRIPT_ELEMENT):
 
 
 
-class SWITCH(gpdemo.DEMOSCRIPT_ELEMENT):
+class SWITCH(logodemo.DEMOSCRIPT_ELEMENT):
     def __init__(self, switchdef, start, end):
         super(SWITCH, self).__init__(start, end)
         self.switchdef = switchdef
@@ -203,13 +203,13 @@ def assamble_demo(cube):
         if DEMO_CUBE.freeflies:
             return
 
-        n = 40
+        n = 50
         hue = 0
         for i in range(0, n):
-            hue += 1.0 / 400
+            hue += 1.0 / 40
             rgb = list(colorsys.hsv_to_rgb(hue, 1, 0.5))
             rgb.append(1)
-            DEMO_CUBE.freeflies.append(gpdemo.FreeFly(
+            DEMO_CUBE.freeflies.append(logodemo.FreeFly(
                 color=tuple([int(round(c * 255.0)) for c in rgb]),
                 loc=[random.uniform(0, 31), random.uniform(0, 31), 32]
             ))
@@ -221,5 +221,6 @@ def assamble_demo(cube):
 
     cube.demo_elements.append(SWITCH(createbugs, 0, 0))
     cube.demo_elements.append(FIREFLY_DANCE(0.1, 0, -1))
-    cube.demo_elements.append(SWITCH(switchtoblur, 0, 0))
-    cube.demo_elements.append(SHOW_IMAGE([Ri, Up, Do, Le, Ba, Fr], "grandpix.png", 0, 0, "", 0, -1))
+    #cube.demo_elements.append(SWITCH(switchtoblur, 0, 0))
+    cube.demo_elements.append(SHOW_IMAGE([Ri, Up, Do], "pixxelcubelogo.png", 0, 0, "", 0, -1))
+    cube.demo_elements.append(SHOW_IMAGE([Le, Ba, Fr], "pixxelcubename.png", 0, 0, "", 0, -1))
