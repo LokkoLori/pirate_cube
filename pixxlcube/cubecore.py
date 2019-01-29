@@ -7,17 +7,17 @@ from rgbmatrix import RGBMatrix, RGBMatrixOptions
 
 default_cube_settings = {
     "resolution": 32,
-    "gpio_slowdown": 2,
+    "gpio_slowdown": 3,
     "brightness": 75,
     "chain_length": 3,
     "parallel": 2,
     "sides": [
-        {"name": "Ba", "ori": [0, 1]},
-        {"name": "Up", "ori": [0, 1]},
-        {"name": "Fr", "ori": [0, 1]},
-        {"name": "Ri", "ori": [0, 1]},
-        {"name": "Do", "ori": [0, 1]},
-        {"name": "Le", "ori": [0, 1]}
+        {"name": "Ba", "ori": 3, "equ": ["x","0","y"]},
+        {"name": "Up", "ori": 3, "equ": ["x","y","1"]},
+        {"name": "Fr", "ori": 1, "equ": ["-x","1","y"]},
+        {"name": "Ri", "ori": 1, "equ": ["1","x","y"]},
+        {"name": "Do", "ori": 0, "equ": ["-x","y","0"]},
+        {"name": "Le", "ori": 3, "equ": ["0","-x","y"]}
     ],
     "accelero_tmatrix": [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
 }
@@ -41,6 +41,7 @@ class PiXXLSide(object):
         self.name = data["name"]
         self.res = data["res"]
         self.ori = data["ori"]
+        self.equ = data["equ"]
         self.cube = cube
         self.image = Image.new("RGB", (self.res, self.res))
 
@@ -101,8 +102,8 @@ class PiXXLCube(object):
                 self.preDrawHook()
 
                 side_index = 0
-                for i in range(0, self.options.chain_length):
-                    for j in range(0, self.options.parallel):
+                for j in range(0, self.options.parallel):
+                    for i in range(0, self.options.chain_length):
 
                         side = self.sides[side_index]
                         side.draw()
