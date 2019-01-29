@@ -4,6 +4,8 @@ import signal
 import subprocess
 import time
 
+#This is a prototype server, a very basic solution "You know nothing John Snow"
+
 PORT = 8088
 
 def startcmd(path):
@@ -13,7 +15,7 @@ apps = (
     ("logo", startcmd("../plasma/logodemo.py")),
     ("grandpix", startcmd("../plasma/gpdemo.py")),
     ("plasma", startcmd("../plasma/plasma.py")),
-    ("pacube", startcmd("../pacube.py")),
+    ("pacube", startcmd("../pacube/pacube.py")),
     ("gravitydot", startcmd("../gravitydot.py")),
     ("stop", 'echo "pixxlcube stopped"')
 )
