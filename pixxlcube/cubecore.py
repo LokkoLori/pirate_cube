@@ -44,11 +44,36 @@ class PiXXLSide(object):
         self.res = data["res"]
         self.rol = data["rol"]
         self.equ = data["equ"]
+        self.gavTransM = self.parseEqu()
         self.cube = cube
         self.image = Image.new("RGB", (self.res, self.res))
 
+    def parseEqu(self):
+        m = [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
+        for i in range(0,3):
+            if self.equ[i] == "x":
+                m[i][0] = 1.0
+            elif self.equ[i] == "-x":
+                m[i][0] = -1.0
+            elif self.equ[i] == "y":
+                m[i][1] = 1.0
+            elif self.equ[i] == "-y":
+                m[i][1] = -1.0
+            elif self.equ[i] == "1":
+                m[i][2] = 1.0
+            elif self.equ[i] == "0":
+                m[i][2] = -1.0
+        return m
+
+    def getAlignedGravity(self):
+        return numpy.matmul(self.cube.gravity, self.gavTransM)
+
     def draw(self):
         pass
+
+    def coordsRTD(self, x, y):
+        #raster to descarte coordinates <-- flip y coorditane
+        return x, self.res - y
 
     def alignedDraw(self):
 
@@ -94,6 +119,7 @@ class PiXXLCube(object):
             self.sides.append(sideclass(self, sidedata))
 
         self.image = Image.new("RGB", (self.options.chain_length*self.options.cols, self.options.parallel*self.options.rows))
+        self.accelTransMatrix = self.settings["accelero_tmatrix"]
 
     def preDrawHook(self):
         pass
@@ -112,7 +138,8 @@ class PiXXLCube(object):
             while True:
 
                 self.raw_accel_vector = accelreader.read_raw_accel_vector()
-                self.gravity = numpy.matmul(accelreader.read_raw_accel_vector(), self.settings["accelero_tmatrix"])
+                self.gravity = numpy.matmul(self.raw_accel_vector, self.accelTransMatrix)
+                print self.gravity
                 self.preDrawHook()
 
                 side_index = 0

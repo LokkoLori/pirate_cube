@@ -28,6 +28,30 @@ class CalibratorSide(PiXXLSide):
         #top left (y axis)
         d.ellipse((0 - r, 0 - r, 0 + r, 0 + r), fill=(0, 0, 255))
 
+
+        #draw graviti attack point, blue on top red on bottom
+        gx, gy, gz = self.getAlignedGravity()
+
+        try:
+            x = gx/gz
+        except Exception as e:
+            x = 0
+
+        try:
+            y = gy/gz
+        except Exception as e:
+            y = 0
+
+        fill = (0, 0, 255)
+        if 0 < gz:
+            fill = (255, 0, 0)
+
+        rp2 = self.res*0.5
+        px, py = self.coordsRTD(x*rp2 + rp2, y*rp2 + rp2)
+
+        d.ellipse((px-2, py-2, px+2, py+2), fill=fill, outline=(0, 0, 0))
+
+
 class CalibratorCube(PiXXLCube):
 
     def __init__(self):
