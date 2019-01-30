@@ -2,8 +2,10 @@ import numpy
 import accelreader
 import json
 from PIL import Image
+from PIL.Image import ROTATE_90, ROTATE_180, ROTATE_270
 
 from rgbmatrix import RGBMatrix, RGBMatrixOptions
+
 
 default_cube_settings = {
     "resolution": 32,
@@ -12,12 +14,12 @@ default_cube_settings = {
     "chain_length": 3,
     "parallel": 2,
     "sides": [
-        {"name": "Ba", "ori": 3, "equ": ["x","0","y"]},
-        {"name": "Up", "ori": 3, "equ": ["x","y","1"]},
-        {"name": "Fr", "ori": 1, "equ": ["-x","1","y"]},
-        {"name": "Ri", "ori": 1, "equ": ["1","x","y"]},
-        {"name": "Do", "ori": 0, "equ": ["-x","y","0"]},
-        {"name": "Le", "ori": 3, "equ": ["0","-x","y"]}
+        {"name": "Ba", "rol": 3, "equ": ["x","0","y"]},
+        {"name": "Up", "rol": 3, "equ": ["x","y","1"]},
+        {"name": "Fr", "rol": 1, "equ": ["-x","1","y"]},
+        {"name": "Ri", "rol": 1, "equ": ["1","x","y"]},
+        {"name": "Do", "rol": 0, "equ": ["-x","y","0"]},
+        {"name": "Le", "rol": 3, "equ": ["0","-x","y"]}
     ],
     "accelero_tmatrix": [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
 }
@@ -40,7 +42,7 @@ class PiXXLSide(object):
 
         self.name = data["name"]
         self.res = data["res"]
-        self.ori = data["ori"]
+        self.rol = data["rol"]
         self.equ = data["equ"]
         self.cube = cube
         self.image = Image.new("RGB", (self.res, self.res))
@@ -48,10 +50,22 @@ class PiXXLSide(object):
     def draw(self):
         pass
 
+    def alignedDraw(self):
+
+        self.draw()
+
+        if self.rol == 1:
+            self.image = self.image.transpose(ROTATE_90)
+        elif self.rol == 2:
+            self.image = self.image.transpose(ROTATE_180)
+        elif self.rol == 3:
+            self.image = self.image.transpose(ROTATE_270)
 
 class PiXXLCube(object):
     def __init__(self, sideclass):
 
+
+        assert issubclass(sideclass, PiXXLSide)
         options = RGBMatrixOptions()
 
         self.settings = default_cube_settings
@@ -106,7 +120,7 @@ class PiXXLCube(object):
                     for i in range(0, self.options.chain_length):
 
                         side = self.sides[side_index]
-                        side.draw()
+                        side.alignedDraw()
                         self.image.paste(side.image, (i*self.options.cols, j*self.options.rows))
                         side_index += 1
 
