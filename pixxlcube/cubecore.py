@@ -109,6 +109,7 @@ class PiXXLCube(object):
         options.pwm_lsb_nanoseconds = 130
         options.led_rgb_sequence = "RGB"
         options.pixel_mapper_config = ""
+        options.drop_privileges = False
 
         self.options = options
         self.raw_accel_vector = []
@@ -119,14 +120,15 @@ class PiXXLCube(object):
             self.sides.append(sideclass(self, sidedata))
 
         self.image = Image.new("RGB", (self.options.chain_length*self.options.cols, self.options.parallel*self.options.rows))
-        self.accelTransMatrix = self.settings["accelero_tmatrix"]
 
     def preDrawHook(self):
         pass
 
-    def savesettings(self, path):
+    def savesettings(self, path=None):
         if not path:
             path = "pixxlsettings.json"
+        with open(path, "w") as f:
+            json.dump(self.settings, f, indent=4)
 
     def run(self):
 
@@ -138,8 +140,7 @@ class PiXXLCube(object):
             while True:
 
                 self.raw_accel_vector = accelreader.read_raw_accel_vector()
-                self.gravity = numpy.matmul(self.raw_accel_vector, self.accelTransMatrix)
-                print self.gravity
+                self.gravity = numpy.matmul(self.raw_accel_vector, self.settings["accelero_tmatrix"])
                 self.preDrawHook()
 
                 side_index = 0
@@ -152,7 +153,6 @@ class PiXXLCube(object):
                         side_index += 1
 
                 self.matrix.SetImage(self.image)
-                #self.image.save("/home/pi/img.jpg", "JPEG")
 
         except KeyboardInterrupt:
             print("Exiting\n")
