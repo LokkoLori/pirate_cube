@@ -1,6 +1,7 @@
 import numpy
 import accelreader
 import json
+import os
 from PIL import Image
 from PIL.Image import ROTATE_90, ROTATE_180, ROTATE_270
 
@@ -20,12 +21,12 @@ default_cube_settings = {
     "chain_length": 3,
     "parallel": 2,
     "sides": [
-        {"name": "Ba", "rol": 3, "equ": ["x","0","y"]},
-        {"name": "Up", "rol": 3, "equ": ["x","y","1"]},
-        {"name": "Fr", "rol": 1, "equ": ["-x","1","y"]},
-        {"name": "Ri", "rol": 1, "equ": ["1","x","y"]},
-        {"name": "Do", "rol": 0, "equ": ["-x","y","0"]},
-        {"name": "Le", "rol": 3, "equ": ["0","-x","y"]}
+        {"name": Ba, "rol": 3, "equ": ["x","0","y"]},
+        {"name": Up, "rol": 3, "equ": ["x","y","1"]},
+        {"name": Fr, "rol": 1, "equ": ["-x","1","y"]},
+        {"name": Ri, "rol": 1, "equ": ["1","x","y"]},
+        {"name": Do, "rol": 0, "equ": ["-x","y","0"]},
+        {"name": Le, "rol": 3, "equ": ["0","-x","y"]}
     ],
     "accelero_tmatrix": [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
 }
@@ -33,6 +34,14 @@ default_cube_settings = {
 def load_settings(path=""):
     if not path:
         path = "pixxlsettings.json"
+        if not os.path.isfile(path):
+            tpath = os.path.join(os.path.dirname(__file__), path)
+            if os.path.isfile(tpath):
+                path = tpath
+            else:
+                tpath = os.path.join(os.path.dirname(os.path.dirname(__file__)), path)
+                if os.path.isfile(tpath):
+                    path = tpath
 
     global default_cube_settings
     try:
@@ -64,28 +73,51 @@ class PiXXLSide(object):
         self.name = data["name"]
         self.res = data["res"]
         self.rol = data["rol"]
-        self.equ = data["equ"]
-        self.gavTransM = self.parseEqu()
+        self.rawequ = data["equ"]
+        self.gavTransM = self.parseGravTrans()
+        self.equMatrix = self.parseEqu()
         self.cube = cube
         self.image = Image.new("RGB", (self.res, self.res))
         self.pre_effects = []
         self.post_effects = []
 
-    def parseEqu(self):
+    def parseGravTrans(self):
         m = [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
         for i in range(0,3):
-            if self.equ[i] == "x":
+            if self.rawequ[i] == "x":
                 m[i][0] = 1.0
-            elif self.equ[i] == "-x":
+            elif self.rawequ[i] == "-x":
                 m[i][0] = -1.0
-            elif self.equ[i] == "y":
+            elif self.rawequ[i] == "y":
                 m[i][1] = 1.0
-            elif self.equ[i] == "-y":
+            elif self.rawequ[i] == "-y":
                 m[i][1] = -1.0
-            elif self.equ[i] == "1":
+            elif self.rawequ[i] == "1":
                 m[i][2] = 1.0
-            elif self.equ[i] == "0":
+            elif self.rawequ[i] == "0":
                 m[i][2] = -1.0
+        return m
+
+
+    def parseEqu(self):
+
+        m = [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
+        for i in range(0, 3):
+            if self.rawequ[i] == "x":
+                m[i][0] = 1.0
+            elif self.rawequ[i] == "-x":
+                m[i][0] = -1.0
+                m[i][2] = self.res * 1.0
+            elif self.rawequ[i] == "y":
+                m[i][1] = 1.0
+            elif self.rawequ[i] == "-y":
+                m[i][1] = -1.0
+                m[i][2] = self.res * 1.0
+            elif self.rawequ[i] == "1":
+                m[i][2] = self.res * 1.0
+            elif self.rawequ[i] == "0":
+                m[i][2] = 0.0
+
         return m
 
     def getAlignedGravity(self):

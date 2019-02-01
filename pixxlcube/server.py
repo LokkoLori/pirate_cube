@@ -18,6 +18,7 @@ apps = (
     ("PaCube Game", "pacube", startcmd("../pacube/pacube.py")),
     ("Calibrator", "calibrate", startcmd("../calibrate.py")),
     ("Matrix Cube", "thematirx", startcmd("../effects/thematrix.py")),
+    ("Plasma Lamp", "plasmalamp", startcmd("../effects/plasma.py")),
     ("stop", "stop", 'echo "pixxlcube stopped"')
 )
 
