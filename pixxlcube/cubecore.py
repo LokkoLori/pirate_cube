@@ -6,6 +6,12 @@ from PIL.Image import ROTATE_90, ROTATE_180, ROTATE_270
 
 from rgbmatrix import RGBMatrix, RGBMatrixOptions
 
+Ba = "Ba"
+Up = "Up"
+Fr = "Fr"
+Ri = "Ri"
+Do = "Do"
+Le = "Le"
 
 default_cube_settings = {
     "resolution": 32,
@@ -37,6 +43,21 @@ def load_settings(path=""):
 
 load_settings()
 
+class PiXXLEffect(object):
+    def __init__(self, side):
+        self.side = side
+        self.image = Image.new("RGB", (side.res, side.res))
+        self.is_active = False
+
+    def draw(self):
+        pass
+
+    def basicDraw(self):
+        if self.is_active:
+            self.draw()
+            self.side.image.paste(self.image)
+
+
 class PiXXLSide(object):
     def __init__(self, cube, data):
 
@@ -47,6 +68,8 @@ class PiXXLSide(object):
         self.gavTransM = self.parseEqu()
         self.cube = cube
         self.image = Image.new("RGB", (self.res, self.res))
+        self.pre_effects = []
+        self.post_effects = []
 
     def parseEqu(self):
         m = [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
@@ -75,9 +98,26 @@ class PiXXLSide(object):
         #raster to descarte coordinates <-- flip y coorditane
         return x, self.res - y
 
-    def alignedDraw(self):
+    def addEffect(self, effectclass, switchon=True, pre=True):
+
+        assert issubclass(effectclass, PiXXLEffect)
+        effect = effectclass(self)
+        if switchon:
+            effect.is_active = True
+        if pre:
+            self.pre_effects.append(effect)
+        else:
+            self.post_effects.append(effect)
+
+    def basicDraw(self):
+
+        for pe in self.pre_effects:
+            pe.basicDraw()
 
         self.draw()
+
+        for pe in self.post_effects:
+            pe.basicDraw()
 
         if self.rol == 1:
             self.image = self.image.transpose(ROTATE_90)
@@ -87,8 +127,7 @@ class PiXXLSide(object):
             self.image = self.image.transpose(ROTATE_270)
 
 class PiXXLCube(object):
-    def __init__(self, sideclass):
-
+    def __init__(self, sideclass=PiXXLSide):
 
         assert issubclass(sideclass, PiXXLSide)
         options = RGBMatrixOptions()
@@ -148,7 +187,7 @@ class PiXXLCube(object):
                     for i in range(0, self.options.chain_length):
 
                         side = self.sides[side_index]
-                        side.alignedDraw()
+                        side.basicDraw()
                         self.image.paste(side.image, (i*self.options.cols, j*self.options.rows))
                         side_index += 1
 
@@ -156,3 +195,12 @@ class PiXXLCube(object):
 
         except KeyboardInterrupt:
             print("Exiting\n")
+
+
+    def getSide(self, name):
+
+        for side in self.sides:
+            if side.name == name:
+                return side
+
+        return None

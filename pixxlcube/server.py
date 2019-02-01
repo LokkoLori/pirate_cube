@@ -12,12 +12,13 @@ def startcmd(path):
     return "/usr/bin/python {}/{}".format(os.path.dirname(os.path.abspath(__file__)), path)
 
 apps = (
-    ("logo", startcmd("../plasma/logodemo.py")),
-    ("grandpix", startcmd("../plasma/gpdemo.py")),
-    ("plasma", startcmd("../plasma/plasma.py")),
-    ("pacube", startcmd("../pacube/pacube.py")),
-    ("gravitydot", startcmd("../gravitydot.py")),
-    ("stop", 'echo "pixxlcube stopped"')
+    ("PixxelCube Logo", "logodemo", startcmd("../plasma/logodemo.py")),
+    ("Grandpix Logo", "gpdemo", startcmd("../plasma/gpdemo.py")),
+    ("Function2018 Demo", "plasma", startcmd("../plasma/plasma.py")),
+    ("PaCube Game", "pacube", startcmd("../pacube/pacube.py")),
+    ("Calibrator", "calibrate", startcmd("../calibrate.py")),
+    ("Matrix Cube", "thematirx", startcmd("../effects/thematrix.py")),
+    ("stop", "stop", 'echo "pixxlcube stopped"')
 )
 
 apro = None
@@ -27,7 +28,7 @@ def start_app(cmd):
     if apro:
         os.killpg(os.getpgid(apro.pid), signal.SIGTERM)
         apro = None
-        time.sleep(2)
+        #time.sleep(0.5)
     print cmd
     apro = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True, preexec_fn=os.setsid)
 
@@ -44,9 +45,9 @@ class PiXXLCubeServer(BaseHTTPRequestHandler):
 
         links = ""
         for appd in apps:
-            if "/"+appd[0] == self.path:
-                start_app(appd[1])
-            links += "<a href='/{0}'>{0}</a><br/>\n".format(appd[0])
+            if "/"+appd[1] == self.path:
+                start_app(appd[2])
+            links += "<a href='/{}'>{}</a><br/>\n".format(appd[1],appd[0])
 
         return "<html><head><style>a {{font-size: 5em}}</style></head><body><h1>Say hello to my PiXXL Cube!</h1><br/>{}</body></html>".format(links)
 
