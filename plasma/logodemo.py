@@ -391,7 +391,10 @@ class Square():
     def drawimages(self):
 
         for i in self.images_shown:
-            self.drawlayer.paste(i[0], (i[1], i[2]), i[0])
+            if i[3] == "nomask":
+                self.drawlayer.paste(i[0], (i[1], i[2]))
+            else:
+                self.drawlayer.paste(i[0], (i[1], i[2]), i[0])
 
     def draw(self, gravity):
 

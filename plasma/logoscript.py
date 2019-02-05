@@ -2,6 +2,8 @@ import logodemo
 import random
 import colorsys
 import sys
+import pyqrcode
+import socket
 
 from PIL import Image
 
@@ -223,4 +225,17 @@ def assamble_demo(cube):
     cube.demo_elements.append(FIREFLY_DANCE(0.1, 0, -1))
     #cube.demo_elements.append(SWITCH(switchtoblur, 0, 0))
     cube.demo_elements.append(SHOW_IMAGE([Ri, Up, Do], "pixxelcubelogo.png", 0, 0, "", 0, -1))
-    cube.demo_elements.append(SHOW_IMAGE([Le, Ba, Fr], "pixxelcubename.png", 0, 0, "", 0, -1))
+    cube.demo_elements.append(SHOW_IMAGE([Le, Ba], "pixxelcubename.png", 0, 0, "", 0, -1))
+
+
+    qrc = pyqrcode.create("http://{}:8088".format(socket.gethostname()), error="L")
+    qrc.png("qrp.png", scale=1, quiet_zone=0, module_color=(0, 0, 0, 255), background=(255, 255, 255, 255))
+
+    i = Image.open("qrp.png")
+    bg = Image.new("RGB", (32, 32), color=(255, 255, 255, 255))
+    width, heigth = i.size
+    topleft = (32 - width) / 2
+    bg.paste(i, (topleft, topleft))
+    bg.save("qrb.png")
+
+    cube.demo_elements.append(SHOW_IMAGE([Fr], "qrb.png", 0, 0, "nomask", 0, -1))

@@ -106,4 +106,6 @@ if __name__ == "__main__":
     for s in [cube.getSide(s) for s in sides]:
         s.addEffect(PlasmaEffect)
 
+    cube.options.brightness = 100
+
     cube.run()

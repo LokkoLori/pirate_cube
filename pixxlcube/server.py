@@ -12,14 +12,14 @@ def startcmd(path):
     return "/usr/bin/python {}/{}".format(os.path.dirname(os.path.abspath(__file__)), path)
 
 apps = (
-    ("PixxelCube Logo", "logodemo", startcmd("../plasma/logodemo.py")),
+    ("PixxelCube Logo", "logodemo", startcmd("../plasma/logodemo.py"), "autostart"),
     ("Grandpix Logo", "gpdemo", startcmd("../plasma/gpdemo.py")),
     ("Function2018 Demo", "plasma", startcmd("../plasma/plasma.py")),
     ("PaCube Game", "pacube", startcmd("../pacube/pacube.py")),
     ("Calibrator", "calibrate", startcmd("../calibrate.py")),
     ("Matrix Cube", "thematirx", startcmd("../effects/thematrix.py")),
     ("Plasma Lamp", "plasmalamp", startcmd("../effects/plasma.py")),
-    ("stop", "stop", 'echo "pixxlcube stopped"')
+    ("STOP", "stop", 'echo "pixxlcube stopped"')
 )
 
 apro = None
@@ -69,6 +69,11 @@ class PiXXLCubeServer(BaseHTTPRequestHandler):
 
 def start_server():
     httpd = HTTPServer(("", PORT), PiXXLCubeServer)
+    for appd in apps:
+        print appd[0]
+        if 3 < len(appd) and appd[3] == "autostart":
+            start_app(appd[2])
+            break
     print "starting pixxlcube server at port", PORT
     httpd.serve_forever()
 
