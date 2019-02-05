@@ -205,9 +205,11 @@ def assamble_demo(cube):
 
         n = 40
         hue = 0
+        val = 0.0
         for i in range(0, n):
             hue += 1.0 / 400
-            rgb = list(colorsys.hsv_to_rgb(hue, 1, 0.5))
+            val += 1.0 / 40
+            rgb = list(colorsys.hsv_to_rgb(hue, 1, val))
             rgb.append(1)
             DEMO_CUBE.freeflies.append(gpdemo.FreeFly(
                 color=tuple([int(round(c * 255.0)) for c in rgb]),
