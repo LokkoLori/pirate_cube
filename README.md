@@ -1,21 +1,19 @@
 # pirate_cube
-Logic game for Pixel Cube. 
+python27 SDK and sample apps for PiXXL Cube  
 
-hardware:
+dev hardware:
 
-Rasberry Pi 3
+Rasberry Pi 3 b+
 
-32 x 32 pixel panel on each side of the cube
+32 x 32 LED panel on each side of the cube
+gpio LED controller
+accelerometer
 
-+ accelerometer
-
-led controller got from:
+led controller API:
 https://github.com/hzeller/rpi-rgb-led-matrix
 
-required python 2.7
-numpy, PIL, smbus
+pip installs:
+numpy, PIL, smbus, pypng, pyqrcode
 
 reading accelero data by:
 http://blog.bitify.co.uk/2013/11/reading-data-from-mpu-6050-on-raspberry.html
-
-
