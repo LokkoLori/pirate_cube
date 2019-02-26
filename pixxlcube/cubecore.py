@@ -2,7 +2,7 @@ import numpy
 import accelreader
 import json
 import os
-from PIL import Image
+from PIL import Image, ImageStat, ImageEnhance
 from PIL.Image import ROTATE_90, ROTATE_180, ROTATE_270
 
 from rgbmatrix import RGBMatrix, RGBMatrixOptions
@@ -28,7 +28,8 @@ default_cube_settings = {
         {"name": Do, "rol": 2, "equ": ["x","-y","0"]},
         {"name": Le, "rol": 3, "equ": ["0","-x","y"]}
     ],
-    "accelero_tmatrix": [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+    "accelero_tmatrix": [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+    "maxlight": 1000000
 }
 
 def load_settings(path=""):
@@ -204,6 +205,7 @@ class PiXXLCube(object):
         options = RGBMatrixOptions()
 
         self.settings = default_cube_settings
+        self.settings["maxlight"] = self.settings.get("maxlight", 1000000)
         #cube specific defaults:
         options.rows = default_cube_settings["resolution"]
         options.cols = default_cube_settings["resolution"]
@@ -271,6 +273,17 @@ class PiXXLCube(object):
                         side.basicDraw()
                         self.image.paste(side.image, (i*self.options.cols, j*self.options.rows))
                         side_index += 1
+
+                maxlight = self.settings.get("maxlight", 0)
+
+                if maxlight:
+                    stat = ImageStat.Stat(self.image)
+                    sum = stat.sum[0] + stat.sum[1] + stat.sum[2]
+                    if self.settings["maxlight"] < sum:
+
+                        persum = 1.0 * self.settings["maxlight"] / sum
+                        enhance = ImageEnhance.Brightness(self.image)
+                        self.image = enhance.enhance(persum)
 
                 self.matrix.SetImage(self.image)
 
