@@ -1,14 +1,42 @@
-import sys, os
-
-rootdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(rootdir)
-
-from pixxlcube.cubecore import PiXXLSide, PiXXLCube, ShakeGestureHandler
-
-from PIL import ImageDraw, ImageFont, Image
-import math
+from samplebase import SampleBase
+from rgbmatrix import graphics
+import time
+import sys
+from PIL import Image
+from PIL import ImageDraw
+from PIL import ImageFont
+from PIL.Image import FLIP_LEFT_RIGHT, FLIP_TOP_BOTTOM, ROTATE_90, ROTATE_180, ROTATE_270
+from accelero import get_accelvector
 from mazemap import parsemap, charimage, Hero
-from colors import setColorChema
+import math
+from colors import getcolor, setColorChema
+import os
+
+
+arialfont = ImageFont.truetype(os.path.join(os.path.dirname(__file__),"arial.ttf"), 10)
+
+D = -0.9
+
+def treshold(x, mina, maxa):
+    if math.fabs(x) < mina:
+        return 0
+    if x < 0:
+        x += mina
+        if x < -maxa:
+            x = -maxa
+
+    else:
+        x -= mina
+        if maxa < x:
+            x = maxa
+
+    return x
+
+HEROES = []
+
+tickcount = 4
+
+prints = ""
 
 
 facematrix = {
@@ -50,42 +78,15 @@ facematrix = {
     }
 }
 
+class Square():
 
-arialfont = ImageFont.truetype(os.path.join(os.path.dirname(__file__),"arial.ttf"), 10)
-
-D = -0.9
-
-def treshold(x, mina, maxa):
-    if math.fabs(x) < mina:
-        return 0
-    if x < 0:
-        x += mina
-        if x < -maxa:
-            x = -maxa
-
-    else:
-        x -= mina
-        if maxa < x:
-            x = maxa
-
-    return x
-
-HEROES = []
-
-tickcount = 4
-
-class PaSide(PiXXLSide):
-
-    def __init__(self, cube, data):
-        super(PaSide, self).__init__(cube, data)
-        self.reset()
-
-
-    def reset(self):
-
+    def __init__(self, name, owner):
         global HEROES
+        self.image = Image.new("RGB", (32, 32))
+        self.name = name
         self.map, heroes = parsemap("{}.map".format(self.name), owner=self)
         HEROES += heroes
+
         self.mazeImage = Image.new("RGB", (32, 32))
         self.mazeWalls = charimage(32, 32)
 
@@ -94,8 +95,10 @@ class PaSide(PiXXLSide):
 
         self.tick = 0
         self.tock = 0
+        self.owner = owner
+        self.flasher = 0
+        self.killafterflash = False
         self.showwelldone = False
-
 
     def drawmaze(self):
 
@@ -127,6 +130,8 @@ class PaSide(PiXXLSide):
             hero.copy = None
             return
 
+        #"my": ["Fr",1,1, 0,28,-1, 1,-4,-1],
+        #nane, ow direction, xtrans, ytrans
         if not hero.copy:
 
             hero.copy = Hero(conv[0], 0, 0, " ", hero.color)
@@ -135,6 +140,8 @@ class PaSide(PiXXLSide):
         hero.copy.x = conv[4] + conv[5]*coords[conv[3]]
         hero.copy.y = conv[7] + conv[8]*coords[conv[6]]
 
+        #print "{} {} {} -> {} {} {} ... {}".format(hero.loc, coords[0], coords[1], hero.copy.loc, hero.copy.x, hero.copy.y, dcoord[conv[2]])
+
         if (coords[conv[2]] <= -2 and not conv[1] and 0 < dcoord[conv[2]]) or (coords[conv[2]] >= 30 and conv[1] and dcoord[conv[2]] < 0):
             if D < 0 or math.fabs(dcoord[conv[2]]) > 0.9:
                 #print "hopp"
@@ -142,6 +149,29 @@ class PaSide(PiXXLSide):
                 hero.copy.copyof = None
                 HEROES.append(hero.copy)
                 hero.copy = None
+
+            # original experiment
+            #
+            # if hero.y < 0:
+            #     if not hero.copy:
+            #         newfacet = "Fr"
+            #         if hero.loc == "Fr":
+            #             newfacet = "Up"
+            #         hero.copy = Hero(newfacet, 0, 0, "h")
+            #         hero.copy.copyof = hero
+            #     hero.copy.x = 28 - int(hero.x)
+            #     hero.copy.y = - 4 - int(hero.y)
+            #
+            #     if hero.y <= -2 and math.fabs(dy) > 0.7:
+            #         # add to other side
+            #         HEROES.remove(hero)
+            #         hero.copy.copyof = None
+            #         HEROES.append(hero.copy)
+            #         hero.copy = None
+            # else:
+            #     hero.copy = None
+
+
 
     def handleHero(self, hero, gravity):
 
@@ -213,11 +243,17 @@ class PaSide(PiXXLSide):
 
     def welldone(self):
 
-        self.cube.aboutRestart(200)
+        self.flasher = 200
+        self.killafterflash = True
         self.showwelldone = True
 
+    def restart(self):
 
-    def draw(self):
+        self.flasher = 50
+        self.killafterflash = True
+
+    def draw(self, gravity):
+
 
         setColorChema(self.colorscheme)
         if self.colorscheme != self.last_colorscheme:
@@ -231,16 +267,23 @@ class PaSide(PiXXLSide):
             self.tick = 0
             self.tock += 1
 
-        if self.cube.restartCounter:
+        if self.flasher:
 
-            if self.cube.restartCounter % 3 == 0:
+            if self.flasher % 3 == 0:
                 cs = "r"
-            if self.cube.restartCounter % 3 == 1:
+            if self.flasher % 3 == 1:
                 cs = "g"
-            if self.cube.restartCounter % 3 == 2:
+            if self.flasher % 3 == 2:
                 cs = "b"
 
-            self.colorscheme = cs
+            for sq in self.owner.squares:
+                sq.colorscheme = cs
+
+            self.flasher -= 1
+
+            if self.flasher == 0:
+                if self.killafterflash:
+                    self.owner.kill = True
 
         for row in self.map:
             for sect in row:
@@ -248,50 +291,103 @@ class PaSide(PiXXLSide):
 
         self.mazeWalls.drawOnImage(self.image, ["r", "g", "b"], self.tock)
 
+
         for hero in HEROES:
-            self.handleHero(hero, self.getAlignedGravity())
+            self.handleHero(hero, gravity)
             if hero.copy:
-                self.handleHero(hero.copy, self.getAlignedGravity())
+                self.handleHero(hero.copy, gravity)
 
         if self.showwelldone:
             d = ImageDraw.Draw(self.image)
-            d.rectangle((1, 1, 30, 30), fill=(0, 0, 0))
+            d.rectangle((1, 1, 30, 30), fill=(0,0,0))
             d.text((2, 3), "WELL", font=arialfont)
             d.text((2, 17), "DONE", font=arialfont)
 
         return
 
-class PaCube(PiXXLCube):
 
-    def __init__(self):
-        super(PaCube, self).__init__(PaSide)
+class LEDCube(SampleBase):
+    def __init__(self, *args, **kwargs):
         self.kill = False
         self.squares = []
         self.reset()
-        self.restartCounter = 0
-        self.addGestureHandler(ShakeGestureHandler(self.shakeRestart))
+        self.preg = [0 ,0 , 0]
+        self.shakec = 0
+        super(LEDCube, self).__init__(*args, **kwargs)
 
     def reset(self):
         global HEROES
         HEROES = []
-        for side in self.sides:
-            side.reset()
+        self.squares = []
+        for n in ["Ba", "Up", "Fr", "Ri", "Do", "Le"]:
+            self.squares.append(Square(n, self))
 
-    def aboutRestart(self, cicle):
-        self.restartCounter = cicle
+    def run(self):
+        image = Image.new("RGB", (96, 64))
 
-    def shakeRestart(self):
-        print "shake_restart"
-        self.aboutRestart(30)
+        vects = [
+            [[1, 0], [1, 2], [-1, 1], [ROTATE_270]],
+            [[1, 0], [1, 1], [1, 2], [ROTATE_270]],
+            [[-1, 0], [1, 2], [1, 1], [ROTATE_90]],
+            [[1, 1], [1, 2], [1, 0], [ROTATE_90]],
+            [[1, 0], [-1, 1], [-1, 2], [ROTATE_180]],
+            [[-1, 1], [1, 2], [-1, 0], [ROTATE_270]]
+        ]
 
-    def preDrawHook(self):
+        while True:
 
-        if self.restartCounter:
-            self.restartCounter -= 1
-            if self.restartCounter == 0:
+            if self.kill:
                 self.reset()
+                self.kill = False
+
+            gravity = get_accelvector()
+
+            if gravity is None:
+                continue
+
+            pdx = gravity[0]-self.preg[0]
+            pdy = gravity[1]-self.preg[1]
+            pdz = gravity[2]-self.preg[2]
+
+            diffv = math.sqrt(pdx*pdx + pdy*pdy + pdz*pdz)
+            self.preg  = list(gravity)
+            if 0.1 < diffv:
+                self.shakec += 1
+
+                if 80 < self.shakec:
+                    print "restart"
+                    self.shakec = 0
+                    self.squares[0].restart()
+
+            else:
+                self.shakec -= 2
+                if self.shakec < 0:
+                    self.shakec = 0
+
+            for i in range(0, 3):
+                for j in range(0, 2):
+                    s = self.squares[j*3+i]
+                    v = vects[j*3+i]
+
+                    g = []
+                    for k in range(0, 3):
+                        g.append(gravity[v[k][1]]*v[k][0])
+
+                    s.draw(g)
+
+                    tile = s.image
+                    for t in v[3]:
+                        tile = tile.transpose(t)
+
+                    image.paste(tile, (i*32, j*32))
+
+            self.matrix.SetImage(image)
 
 
+
+# Main function
 if __name__ == "__main__":
-    cube = PaCube()
-    cube.run()
+    sys.argv += ["--led-chain", "3", "--led-parallel", "2", "--led-brightness", "75", "--led-slowdown-gpio", "2"]
+    graphics_test = LEDCube()
+    if (not graphics_test.process()):
+        graphics_test.print_help()

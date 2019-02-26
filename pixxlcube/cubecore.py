@@ -25,7 +25,7 @@ default_cube_settings = {
         {"name": Up, "rol": 3, "equ": ["x","y","1"]},
         {"name": Fr, "rol": 1, "equ": ["-x","1","y"]},
         {"name": Ri, "rol": 1, "equ": ["1","x","y"]},
-        {"name": Do, "rol": 0, "equ": ["-x","y","0"]},
+        {"name": Do, "rol": 2, "equ": ["x","-y","0"]},
         {"name": Le, "rol": 3, "equ": ["0","-x","y"]}
     ],
     "accelero_tmatrix": [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
@@ -65,6 +65,45 @@ class PiXXLEffect(object):
         if self.is_active:
             self.draw()
             self.side.image.paste(self.image)
+
+
+class PiXXLGestureHandler(object):
+
+    def __init__(self):
+        pass
+    def vectorinput(self, vector):
+        pass
+
+
+class ShakeGestureHandler(PiXXLGestureHandler):
+
+    def __init__(self, callback, treshold=0.2, trigger=30.0, ease=1.0):
+        self.callback = callback
+        self.treshold = treshold
+        self.trigger = trigger
+        self.ease = ease
+        self.preVector = [0, 0, 0]
+        self.pressure = 0.0
+
+    def vectorinput(self, vector):
+
+        diff = 0.0
+        diff += (vector[0] - self.preVector[0]) ** 2
+        diff += (vector[1] - self.preVector[1]) ** 2
+        diff += (vector[2] - self.preVector[2]) ** 2
+
+        if self.treshold < diff:
+            self.pressure += diff
+            if self.trigger < self.pressure:
+                self.pressure = 0.0
+                self.callback()
+        else:
+            self.pressure -= self.ease
+            if self.pressure < 0.0:
+                self.pressure = 0.0
+
+        self.preVector = list(vector)
+
 
 
 class PiXXLSide(object):
@@ -190,6 +229,8 @@ class PiXXLCube(object):
             sidedata["res"] = default_cube_settings["resolution"]
             self.sides.append(sideclass(self, sidedata))
 
+        self.gestureHandlers = []
+
         self.image = Image.new("RGB", (self.options.chain_length*self.options.cols, self.options.parallel*self.options.rows))
 
     def preDrawHook(self):
@@ -200,6 +241,11 @@ class PiXXLCube(object):
             path = "pixxlsettings.json"
         with open(path, "w") as f:
             json.dump(self.settings, f, indent=4)
+
+    def addGestureHandler(self, gestureHandler):
+
+        assert isinstance(gestureHandler, PiXXLGestureHandler)
+        self.gestureHandlers.append(gestureHandler)
 
     def run(self):
 
@@ -212,6 +258,9 @@ class PiXXLCube(object):
 
                 self.raw_accel_vector = accelreader.read_raw_accel_vector()
                 self.gravity = numpy.matmul(self.raw_accel_vector, self.settings["accelero_tmatrix"])
+                for gestureHandler in self.gestureHandlers:
+                    gestureHandler.vectorinput(self.gravity)
+
                 self.preDrawHook()
 
                 side_index = 0
