@@ -54,6 +54,7 @@ facematrix = {
 arialfont = ImageFont.truetype(os.path.join(os.path.dirname(__file__),"arial.ttf"), 10)
 
 D = -0.9
+tickcount = 4
 
 def treshold(x, mina, maxa):
     if math.fabs(x) < mina:
@@ -70,10 +71,6 @@ def treshold(x, mina, maxa):
 
     return x
 
-HEROES = []
-
-tickcount = 4
-
 class PaSide(PiXXLSide):
 
     def __init__(self, cube, data):
@@ -83,9 +80,8 @@ class PaSide(PiXXLSide):
 
     def reset(self):
 
-        global HEROES
         self.map, heroes = parsemap("{}.map".format(self.name), owner=self)
-        HEROES += heroes
+        self.cube.heroes += heroes
         self.mazeImage = Image.new("RGB", (32, 32))
         self.mazeWalls = charimage(32, 32)
 
@@ -138,9 +134,9 @@ class PaSide(PiXXLSide):
         if (coords[conv[2]] <= -2 and not conv[1] and 0 < dcoord[conv[2]]) or (coords[conv[2]] >= 30 and conv[1] and dcoord[conv[2]] < 0):
             if D < 0 or math.fabs(dcoord[conv[2]]) > 0.9:
                 #print "hopp"
-                HEROES.remove(hero)
+                self.cube.heroes.remove(hero)
                 hero.copy.copyof = None
-                HEROES.append(hero.copy)
+                self.cube.heroes.append(hero.copy)
                 hero.copy = None
 
     def handleHero(self, hero, gravity):
@@ -248,7 +244,7 @@ class PaSide(PiXXLSide):
 
         self.mazeWalls.drawOnImage(self.image, ["r", "g", "b"], self.tock)
 
-        for hero in HEROES:
+        for hero in self.cube.heroes:
             self.handleHero(hero, self.getAlignedGravity())
             if hero.copy:
                 self.handleHero(hero.copy, self.getAlignedGravity())
@@ -264,16 +260,13 @@ class PaSide(PiXXLSide):
 class PaCube(PiXXLCube):
 
     def __init__(self):
+        self.heroes = []
         super(PaCube, self).__init__(PaSide)
-        self.kill = False
-        self.squares = []
-        self.reset()
         self.restartCounter = 0
         self.addGestureHandler(ShakeGestureHandler(self.shakeRestart))
 
     def reset(self):
-        global HEROES
-        HEROES = []
+        self.heroes = []
         for side in self.sides:
             side.reset()
 
