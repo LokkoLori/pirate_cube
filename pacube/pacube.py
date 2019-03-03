@@ -242,7 +242,7 @@ class PaSide(PiXXLSide):
             for sect in row:
                 sect.renderFloor(self.image, self.tock)
 
-        self.mazeWalls.drawOnImage(self.image, ["r", "g", "b"], self.tock)
+        self.mazeWalls.drawOnImage(self.image, ["r", "g", "b", "y"], self.tock)
 
         for hero in self.cube.heroes:
             self.handleHero(hero, self.getAlignedGravity())
