@@ -92,6 +92,83 @@ class SHOW_IMAGE(logodemo.DEMOSCRIPT_ELEMENT):
             s.images_shown = [_ for _ in s.images_shown if _[4] != self]
 
 
+class SHOW_IP_QR(logodemo.DEMOSCRIPT_ELEMENT):
+
+    def __init__(self, squares, start, end):
+        super(SHOW_IP_QR, self).__init__(start, end)
+        self.squares = squares
+        self.image = None
+        self.ip = None
+        self.showing = False
+
+    def get_ip(self):
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            # doesn't even have to be reachable
+            s.connect(('10.255.255.255', 1))
+            IP = s.getsockname()[0]
+        except:
+            IP = '127.0.0.1'
+        finally:
+            s.close()
+        return IP
+
+    def run(self, count, gravity):
+        if count % 20 == 0:
+            self.refreshqr()
+
+    def refreshqr(self):
+
+        ip = self.get_ip()
+        if self.ip == ip:
+            return
+
+        self.ip = ip
+        #todo: don't do the magic with png files!!!
+        qrc = pyqrcode.create("http://{}:8088".format(self.ip), error="L")
+        qrstr = qrc.text()
+        qrstrl = qrstr.split('\n')
+        i = Image.new("RGB", (len(qrstrl[0]), len(qrstrl)), color=(255, 255, 255, 255))
+
+        qrm = i.load()
+
+        for y in range(0, len(qrstrl)):
+            for x in range(0, len(qrstrl[y])):
+                if qrstrl[y][x] == "1":
+                    qrm[x, y] = (0,0,0)
+
+        bg = Image.new("RGB", (32, 32), color=(255, 255, 255, 255))
+        width, heigth = i.size
+        topleft = (32 - width) / 2
+        bg.paste(i, (topleft, topleft))
+
+        self.removeImage()
+        self.image = bg
+
+        if self.showing:
+            self.addImage()
+
+    def addImage(self):
+        for s in self.squares:
+            s.images_shown.append([self.image, 0, 0, "nomask", self])
+
+    def removeImage(self):
+
+        for s in self.squares:
+            s.images_shown = [_ for _ in s.images_shown if _[4] != self]
+
+    def at_start(self):
+
+        self.showing = True
+        self.refreshqr()
+
+
+    def at_end(self):
+
+        self.showing = False
+
+
+
 class FIREFLY_DANCE(logodemo.DEMOSCRIPT_ELEMENT):
 
     def __init__(self, lurk, start, end):
@@ -180,19 +257,6 @@ def al(c):
     LOC += c
     return LOC
 
-def get_ip():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        # doesn't even have to be reachable
-        s.connect(('10.255.255.255', 1))
-        IP = s.getsockname()[0]
-    except:
-        IP = '127.0.0.1'
-    finally:
-        s.close()
-    return IP
-
-
 def assamble_demo(cube):
     global DEMO_CUBE
     DEMO_CUBE = cube
@@ -240,14 +304,4 @@ def assamble_demo(cube):
     cube.demo_elements.append(SHOW_IMAGE([Le, Ba], "pixxelcubename.png", 0, 0, "", 0, -1))
 
 
-    qrc = pyqrcode.create("http://{}:8088".format(get_ip()), error="L")
-    qrc.png("qrp.png", scale=1, quiet_zone=0, module_color=(0, 0, 0, 255), background=(255, 255, 255, 255))
-
-    i = Image.open("qrp.png")
-    bg = Image.new("RGB", (32, 32), color=(255, 255, 255, 255))
-    width, heigth = i.size
-    topleft = (32 - width) / 2
-    bg.paste(i, (topleft, topleft))
-    bg.save("qrb.png")
-
-    cube.demo_elements.append(SHOW_IMAGE([Fr], "qrb.png", 0, 0, "nomask", 0, -1))
+    cube.demo_elements.append(SHOW_IP_QR([Fr], 0, -1))
