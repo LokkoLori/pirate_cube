@@ -2,9 +2,10 @@ import sys, os
 sys.path.append(os.path.join(os.path.dirname(__file__),".."))
 from pixxlcube.cubecore import PiXXLEffect, PiXXLCube
 import random
+import time
 
 class MatrixEffect(PiXXLEffect):
-    def __init__(self, side):
+    def __init__(self, side, fps=15):
         super(MatrixEffect, self).__init__(side)
         self.matrixImageArr = self.image.load()
 
@@ -16,8 +17,8 @@ class MatrixEffect(PiXXLEffect):
                 row.append([0, 0.0])
 
         self.matrix_dropping = True
-        self.matrix_framedrop = 5
-        self.counter = 0
+        self.preTime = time.time()
+        self.steptime = 1.0 / fps
 
     def draw(self):
 
@@ -42,35 +43,39 @@ class MatrixEffect(PiXXLEffect):
                 g = int((val[0] * 1.0) * (1.0 / valmax) * val[1] * 255)
                 self.matrixImageArr[x, y - 1] = (0, g, 0, 255)
 
-        if self.counter % self.matrix_framedrop == 0:
+        atime = time.time()
+        tdelta = atime - self.preTime
 
-            for y in reversed(range(1, self.side.res+2)):
-                for x in range(0, self.side.res):
-                    me = self.matrix[y][x]
-                    ab = self.matrix[y - 1][x]
-                    if me[0] < ab[0]:
-                        self.matrix[y][x] = [ab[0], random.uniform(0.2, 1)]
-                        drawdot(x, y, True)
-                    elif 0 < me[0]:
-                        me[0] -= 1
-                        if me[0] == 0:
-                            me[1] = 0.0
-                            drawdot(x, y)
-                        elif random.randint(0, me[0]) == 0:
-                            me[1] = random.uniform(0.2, 1)
-                            drawdot(x, y)
+        if tdelta < self.steptime:
+            return
 
-            # new drops
+        self.preTime = atime - tdelta + self.steptime
+
+        for y in reversed(range(1, self.side.res+2)):
             for x in range(0, self.side.res):
-                if self.matrix_dropping and random.randint(0, dense) == 0:
-                    self.matrix[0][x] = [random.randint(valmin, valmax), random.uniform(0.2, 1)]
-                    drawdot(x, 0, True)
-                else:
-                    val = self.matrix[0][x]
-                    if val[0] > 0:
-                        val[0] -= 1
+                me = self.matrix[y][x]
+                ab = self.matrix[y - 1][x]
+                if me[0] < ab[0]:
+                    self.matrix[y][x] = [ab[0], random.uniform(0.2, 1)]
+                    drawdot(x, y, True)
+                elif 0 < me[0]:
+                    me[0] -= 1
+                    if me[0] == 0:
+                        me[1] = 0.0
+                        drawdot(x, y)
+                    elif random.randint(0, me[0]) == 0:
+                        me[1] = random.uniform(0.2, 1)
+                        drawdot(x, y)
 
-        self.counter += 1
+        # new drops
+        for x in range(0, self.side.res):
+            if self.matrix_dropping and random.randint(0, dense) == 0:
+                self.matrix[0][x] = [random.randint(valmin, valmax), random.uniform(0.2, 1)]
+                drawdot(x, 0, True)
+            else:
+                val = self.matrix[0][x]
+                if val[0] > 0:
+                    val[0] -= 1
 
 
 
