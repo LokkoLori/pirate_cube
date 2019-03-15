@@ -2,6 +2,8 @@ import numpy
 import accelreader
 import json
 import os
+import threading
+import time
 from PIL import Image, ImageStat, ImageEnhance
 from PIL.Image import ROTATE_90, ROTATE_180, ROTATE_270
 
@@ -227,6 +229,9 @@ class PiXXLCube(object):
         self.raw_accel_vector = []
         self.sides = []
 
+        self.rendering = False
+        self.time = time.time()
+
         for sidedata in default_cube_settings["sides"]:
             sidedata["res"] = default_cube_settings["resolution"]
             self.sides.append(sideclass(self, sidedata))
@@ -234,6 +239,8 @@ class PiXXLCube(object):
         self.gestureHandlers = []
 
         self.image = Image.new("RGB", (self.options.chain_length*self.options.cols, self.options.parallel*self.options.rows))
+
+        self.framecouter = 0
 
     def preDrawHook(self):
         pass
@@ -249,43 +256,54 @@ class PiXXLCube(object):
         assert isinstance(gestureHandler, PiXXLGestureHandler)
         self.gestureHandlers.append(gestureHandler)
 
+    def worker(self):
+
+        if self.rendering:
+            print("frame drop")
+            return
+
+        self.time = time.time()
+        self.rendering = True
+        self.framecouter += 1
+        #print("frame {}".format(self.framecouter))
+
+        self.raw_accel_vector = accelreader.read_raw_accel_vector()
+        self.gravity = numpy.matmul(self.raw_accel_vector, self.settings["accelero_tmatrix"])
+        for gestureHandler in self.gestureHandlers:
+            gestureHandler.vectorinput(self.gravity)
+
+        self.preDrawHook()
+
+        side_index = 0
+        for j in range(0, self.options.parallel):
+            for i in range(0, self.options.chain_length):
+                side = self.sides[side_index]
+                side.basicDraw()
+                self.image.paste(side.image, (i * self.options.cols, j * self.options.rows))
+                side_index += 1
+
+        maxlight = self.settings.get("maxlight", 0)
+
+        if maxlight:
+            stat = ImageStat.Stat(self.image)
+            sum = stat.sum[0] + stat.sum[1] + stat.sum[2]
+            if self.settings["maxlight"] < sum:
+                persum = 1.0 * self.settings["maxlight"] / sum
+                enhance = ImageEnhance.Brightness(self.image)
+                self.image = enhance.enhance(persum)
+
+        self.matrix.SetImage(self.image)
+        self.rendering = False
+
     def run(self):
 
         try:
             print("Press CTRL-C to stop PiXXL app")
             self.matrix = RGBMatrix(options=self.options)
 
-
             while True:
-
-                self.raw_accel_vector = accelreader.read_raw_accel_vector()
-                self.gravity = numpy.matmul(self.raw_accel_vector, self.settings["accelero_tmatrix"])
-                for gestureHandler in self.gestureHandlers:
-                    gestureHandler.vectorinput(self.gravity)
-
-                self.preDrawHook()
-
-                side_index = 0
-                for j in range(0, self.options.parallel):
-                    for i in range(0, self.options.chain_length):
-
-                        side = self.sides[side_index]
-                        side.basicDraw()
-                        self.image.paste(side.image, (i*self.options.cols, j*self.options.rows))
-                        side_index += 1
-
-                maxlight = self.settings.get("maxlight", 0)
-
-                if maxlight:
-                    stat = ImageStat.Stat(self.image)
-                    sum = stat.sum[0] + stat.sum[1] + stat.sum[2]
-                    if self.settings["maxlight"] < sum:
-
-                        persum = 1.0 * self.settings["maxlight"] / sum
-                        enhance = ImageEnhance.Brightness(self.image)
-                        self.image = enhance.enhance(persum)
-
-                self.matrix.SetImage(self.image)
+                self.worker()
+                time.sleep(0.01)
 
         except KeyboardInterrupt:
             print("Exiting\n")
